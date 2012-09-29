@@ -81,6 +81,17 @@ class JavaParserError(JavaParserBaseException):
 # ---- Parser class ----
 
 class Parser(object):
+    operator_precedence = [ set(('||',)),
+                            set(('&&',)),
+                            set(('|',)),
+                            set(('^',)),
+                            set(('&',)),
+                            set(('==', '!=')),
+                            set(('<', '>', '>=', '<=', 'instanceof')),
+                            set(('<<', '>>', '>>>')),
+                            set(('+', '-')),
+                            set(('*', '/', '%')) ]
+
     def __init__(self, tokens):
         self.tokens = util.LookAheadListIterator(tokens)
         self.tokens.set_default(EndOfInput(None))
@@ -161,29 +172,35 @@ class Parser(object):
         if len(parts) == 1:
             return parts[0]
 
-        precedence = [ set(('||',)),
-                       set(('&&',)),
-                       set(('|',)),
-                       set(('^',)),
-                       set(('&',)),
-                       set(('==', '!=')),
-                       set(('<', '>', '>=', '<=', 'instanceof')),
-                       set(('<<', '>>', '>>>')),
-                       set(('+', '-')),
-                       set(('*', '/', '%')) ]
+        operands = list()
+        operators = list()
 
-        for level in range(start_level, len(precedence)):
-            for i in xrange(len(parts) - 2, 0, -2):
-                if parts[i] in precedence[level]:
-                    operator = parts[i]
-                    operandl = self.build_binary_operation(parts[:i], level)
-                    operandr = self.build_binary_operation(parts[i+1:], level + 1)
+        i = 0
 
-                    return tree.BinaryOperation(operator=operator,
-                                                operandl=operandl,
-                                                operandr=operandr)
+        for level in range(start_level, len(self.operator_precedence)):
+            for j in xrange(1, len(parts) - 1, 2):
+                if parts[j] in self.operator_precedence[level]:
+                    operand = self.build_binary_operation(parts[i:j], level + 1)
+                    operator = parts[j]
+                    i = j + 1
 
-        raise JavaParserError("Failed to build binary operation")
+                    operands.append(operand)
+                    operators.append(operator)
+
+            if operands:
+                break
+
+        operand = self.build_binary_operation(parts[i:], level + 1)
+        operands.append(operand)
+
+        operation = operands[0]
+
+        for operator, operandr in zip(operators, operands[1:]):
+            operation = tree.BinaryOperation(operandl=operation)
+            operation.operator = operator
+            operation.operandr = operandr
+
+        return operation
 
     def is_annotation(self, i=0):
         """ Returns true if the position is the start of an annotation application
