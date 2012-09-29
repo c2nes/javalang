@@ -1629,6 +1629,8 @@ class Parser(object):
         declarators = None
         if not self.would_accept(';'):
             declarators = self.parse_for_variable_declarator_rest()
+        else:
+            declarators = [tree.VariableDeclarator()]
         self.accept(';')
 
         condition = None
@@ -2086,7 +2088,7 @@ class Parser(object):
 
         return tree.InnerClassCreator(type=java_type,
                                       arguments=arguments,
-                                      body=body)
+                                      body=class_body)
 
     @parse_debug
     def parse_selector(self):
