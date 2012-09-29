@@ -180,8 +180,8 @@ class Parser(object):
                     operandr = self.build_binary_operation(parts[i+1:], level + 1)
 
                     return tree.BinaryOperation(operator=operator,
-                                               operandl=operandl,
-                                               operandr=operandr)
+                                                operandl=operandl,
+                                                operandr=operandr)
 
         raise JavaParserError("Failed to build binary operation")
 
@@ -362,10 +362,10 @@ class Parser(object):
         body = self.parse_class_body()
 
         return tree.ClassDeclaration(name=name,
-                                    type_parameters=type_params,
-                                    extends=extends,
-                                    implements=implements,
-                                    body=body)
+                                     type_parameters=type_params,
+                                     extends=extends,
+                                     implements=implements,
+                                     body=body)
 
     @parse_debug
     def parse_enum_declaration(self):
@@ -382,8 +382,8 @@ class Parser(object):
         body = self.parse_enum_body()
 
         return tree.EnumDeclaration(name=name,
-                                   implements=implements,
-                                   body=body)
+                                    implements=implements,
+                                    body=body)
 
     @parse_debug
     def parse_normal_interface_declaration(self):
@@ -404,9 +404,9 @@ class Parser(object):
         body = self.parse_interface_body()
 
         return tree.InterfaceDeclaration(name=name,
-                                        type_parameters=type_parameters,
-                                        extends=extends,
-                                        body=body)
+                                         type_parameters=type_parameters,
+                                         extends=extends,
+                                         body=body)
 
     @parse_debug
     def parse_annotation_type_declaration(self):
@@ -419,7 +419,7 @@ class Parser(object):
         body = self.parse_annotation_type_body()
 
         return tree.AnnotationDeclaration(name=name,
-                                         body=body)
+                                          body=body)
 
 # ------------------------------------------------------------------------------
 # -- Types --
@@ -503,7 +503,7 @@ class Parser(object):
         base_type.dimensions += self.parse_array_dimension()
 
         return tree.TypeArgument(type=base_type,
-                                pattern_type=pattern_type)
+                                 pattern_type=pattern_type)
 
     @parse_debug
     def parse_nonwildcard_type_arguments(self):
@@ -581,7 +581,7 @@ class Parser(object):
                     break
 
         return tree.TypeParameter(name=identifier,
-                                 extends=extends)
+                                  extends=extends)
 
     @parse_debug
     def parse_array_dimension(self):
@@ -640,7 +640,7 @@ class Parser(object):
             self.accept(')')
 
         return tree.Annotation(annotation=qualified_identifier,
-                              element=annotation_element)
+                               element=annotation_element)
 
     @parse_debug
     def parse_annotation_element(self):
@@ -669,7 +669,7 @@ class Parser(object):
         value = self.parse_element_value()
 
         return tree.ElementValuePair(name=identifier,
-                                    value=value)
+                                     value=value)
 
     @parse_debug
     def parse_element_value(self):
@@ -858,8 +858,8 @@ class Parser(object):
             self.accept(';')
 
         return tree.MethodDeclaration(parameters=formal_parameters,
-                                     throws=throws,
-                                     body=body)
+                                      throws=throws,
+                                      body=body)
 
     @parse_debug
     def parse_constructor_declarator_rest(self):
@@ -873,8 +873,8 @@ class Parser(object):
         body = self.parse_block()
 
         return tree.ConstructorDeclaration(parameters=formal_parameters,
-                                          throws=throws,
-                                          body=body)
+                                           throws=throws,
+                                           body=body)
 
     @parse_debug
     def parse_generic_method_or_constructor_declaration(self):
@@ -1083,10 +1083,10 @@ class Parser(object):
             parameter_type.dimensions += self.parse_array_dimension()
 
             parameter = tree.FormalParameter(modifiers=modifiers,
-                                            annotations=annotations,
-                                            type=parameter_type,
-                                            name=parameter_name,
-                                            varargs=varargs)
+                                             annotations=annotations,
+                                             type=parameter_type,
+                                             name=parameter_name,
+                                             varargs=varargs)
 
             formal_parameters.append(parameter)
 
@@ -1149,8 +1149,8 @@ class Parser(object):
         array_dimension, initializer = self.parse_variable_declarator_rest()
 
         return tree.VariableDeclarator(name=identifier,
-                                      dimensions=array_dimension,
-                                      initializer=initializer)
+                                       dimensions=array_dimension,
+                                       initializer=initializer)
 
     @parse_debug
     def parse_variable_declarator_rest(self):
@@ -1283,9 +1283,9 @@ class Parser(object):
         self.accept(';')
 
         var = tree.LocalVariableDeclaration(modifiers=modifiers,
-                                           annotations=annotations,
-                                           type=java_type,
-                                           declarators=declarators)
+                                            annotations=annotations,
+                                            type=java_type,
+                                            declarators=declarators)
         return var
 
     @parse_debug
@@ -1317,8 +1317,8 @@ class Parser(object):
                 else_statement = self.parse_statement()
 
             return tree.IfStatement(condition=condition,
-                                   then_statement=then,
-                                   else_statement=else_statement)
+                                    then_statement=then,
+                                    else_statement=else_statement)
 
         elif self.try_accept('assert'):
             condition = self.parse_expression()
@@ -1330,7 +1330,7 @@ class Parser(object):
             self.accept(';')
 
             return tree.AssertStatement(condition=condition,
-                                       value=value)
+                                        value=value)
 
         elif self.try_accept('switch'):
             switch_expression = self.parse_par_expression()
@@ -1339,14 +1339,14 @@ class Parser(object):
             self.accept('}')
 
             return tree.SwitchStatement(expression=switch_expression,
-                                       cases=switch_block)
+                                        cases=switch_block)
 
         elif self.try_accept('while'):
             condition = self.parse_par_expression()
             action = self.parse_statement()
 
             return tree.WhileStatement(condition=condition,
-                                      body=action)
+                                       body=action)
 
         elif self.try_accept('do'):
             action = self.parse_statement()
@@ -1355,7 +1355,7 @@ class Parser(object):
             self.accept(';')
 
             return tree.DoStatement(condition=condition,
-                                   body=action)
+                                    body=action)
 
         elif self.try_accept('for'):
             self.accept('(')
@@ -1364,7 +1364,7 @@ class Parser(object):
             for_statement = self.parse_statement()
 
             return tree.ForStatement(control=for_control,
-                                    body=for_statement)
+                                     body=for_statement)
 
         elif self.try_accept('break'):
             label = None
@@ -1407,7 +1407,7 @@ class Parser(object):
             block = self.parse_block()
 
             return tree.SynchronizedStatement(lock=lock,
-                                             block=block)
+                                              block=block)
 
         elif self.try_accept('try'):
             resource_specification = None
@@ -1438,9 +1438,9 @@ class Parser(object):
                     finally_block = self.parse_block()
 
             return tree.TryStatement(resources=resource_specification,
-                                    block=block,
-                                    catches=catches,
-                                    finally_block=finally_block)
+                                     block=block,
+                                     catches=catches,
+                                     finally_block=finally_block)
 
         else:
             expression = self.parse_expression()
@@ -1485,7 +1485,7 @@ class Parser(object):
         block = self.parse_block()
 
         return tree.CatchClause(parameter=catch_parameter,
-                               block=block)
+                                block=block)
 
     @parse_debug
     def parse_resource_specification(self):
@@ -1516,10 +1516,10 @@ class Parser(object):
         value = self.parse_expression()
 
         return tree.TryResource(modifiers=modifiers,
-                               annotations=annotations,
-                               type=reference_type,
-                               name=name,
-                               value=value)
+                                annotations=annotations,
+                                type=reference_type,
+                                name=name,
+                                value=value)
 
 # ------------------------------------------------------------------------------
 # -- Switch and for statements ---
@@ -1563,7 +1563,7 @@ class Parser(object):
             statements.append(statement)
 
         return tree.SwitchStatementCase(case=labels,
-                                       statements=statements)
+                                        statements=statements)
 
     @parse_debug
     def parse_for_control(self):
@@ -1592,8 +1592,8 @@ class Parser(object):
             update = self.parse_for_init_or_update()
 
         return tree.ForControl(init=init,
-                              condition=condition,
-                              update=update)
+                               condition=condition,
+                               update=update)
 
     @parse_debug
     def parse_for_var_control(self):
@@ -1603,8 +1603,8 @@ class Parser(object):
         var_type.dimensions += self.parse_array_dimension()
 
         var = tree.VariableDeclaration(modifiers=modifiers,
-                                      annotations=annotations,
-                                      type=var_type)
+                                       annotations=annotations,
+                                       type=var_type)
 
         rest = self.parse_for_var_control_rest()
 
@@ -1683,8 +1683,8 @@ class Parser(object):
             assignment_type = self.tokens.next().value
             assignment_expression = self.parse_expression()
             return tree.Assignment(expressionl=expressionl,
-                                  type=assignment_type,
-                                  value=assignment_expression)
+                                   type=assignment_type,
+                                   value=assignment_expression)
         else:
             return expressionl
 
@@ -1702,8 +1702,8 @@ class Parser(object):
             false_expression = self.parse_expressionl()
 
             return tree.TernaryExpression(condition=expression_2,
-                                         if_true=true_expression,
-                                         if_false=false_expression)
+                                          if_true=true_expression,
+                                          if_false=false_expression)
 
         return expression_2
 
@@ -1757,7 +1757,7 @@ class Parser(object):
                     expression = self.parse_expression_3()
 
                     return tree.Cast(type=cast_target,
-                                    expression=expression)
+                                     expression=expression)
             except JavaSyntaxError:
                 pass
 
@@ -1829,7 +1829,7 @@ class Parser(object):
             if self.try_accept('this'):
                 arguments = self.parse_arguments()
                 return tree.ExplicitConstructorInvocation(type_arguments=type_arguments,
-                                                         arguments=arguments)
+                                                          arguments=arguments)
             else:
                 invocation = self.parse_explicit_generic_invocation_suffix()
                 invocation.type_arguments = type_arguments
@@ -1919,8 +1919,8 @@ class Parser(object):
 
         if identifier and arguments:
             return tree.SuperMethodInvocation(member=identifier,
-                                             arguments=arguments,
-                                             type_arguments=type_arguments)
+                                              arguments=arguments,
+                                              type_arguments=type_arguments)
         elif arguments:
             return tree.SuperConstructorInvocation(arguments=arguments)
         else:
@@ -1938,7 +1938,7 @@ class Parser(object):
             identifier = self.parse_identifier()
             arguments = self.parse_arguments()
             return tree.MethodInvocation(member=identifier,
-                                        arguments=arguments)
+                                         arguments=arguments)
 
 # ------------------------------------------------------------------------------
 # -- Creators --
@@ -1968,9 +1968,9 @@ class Parser(object):
         else:
             arguments, body = self.parse_class_creator_rest()
             return tree.ClassCreator(constructor_type_arguments=constructor_type_arguments,
-                                    type=created_name,
-                                    arguments=arguments,
-                                    body=body)
+                                     type=created_name,
+                                     arguments=arguments,
+                                     body=body)
 
     @parse_debug
     def parse_created_name(self):
@@ -2008,7 +2008,7 @@ class Parser(object):
             array_initializer = self.parse_array_initializer()
 
             return tree.ArrayCreator(dimensions=array_dimension,
-                                    initializer=array_initializer)
+                                     initializer=array_initializer)
 
         else:
             array_dimensions = list()
@@ -2080,13 +2080,13 @@ class Parser(object):
             type_arguments = self.parse_nonwildcard_type_arguments_or_diamond()
 
         java_type = tree.ReferenceType(name=identifier,
-                                      arguments=type_arguments)
+                                       arguments=type_arguments)
 
         arguments, class_body = self.parse_class_creator_rest()
 
         return tree.InnerClassCreator(type=java_type,
-                                     arguments=arguments,
-                                     body=body)
+                                      arguments=arguments,
+                                      body=body)
 
     @parse_debug
     def parse_selector(self):
@@ -2106,7 +2106,7 @@ class Parser(object):
                     arguments = self.parse_arguments()
 
                 return tree.MethodInvocation(member=identifier,
-                                            arguments=arguments)
+                                             arguments=arguments)
 
             elif self.would_accept('<'):
                 return self.parse_explicit_generic_invocation()
@@ -2176,9 +2176,9 @@ class Parser(object):
             body = self.parse_class_body()
 
         return tree.EnumConstantDeclaration(annotations=annotations,
-                                           name=constant_name,
-                                           arguments=arguments,
-                                           body=body)
+                                            name=constant_name,
+                                            arguments=arguments,
+                                            body=body)
 
     @parse_debug
     def parse_annotation_type_body(self):
@@ -2243,7 +2243,7 @@ class Parser(object):
                 default = self.parse_element_value()
 
             return tree.AnnotationMethod(dimensions=array_dimension,
-                                        default=default)
+                                         default=default)
         else:
             return self.parse_constant_declarators_rest()
 
