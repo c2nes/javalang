@@ -3,12 +3,14 @@ import sys
 
 import java
 
-def parse_file(filename):
+def parse_file(filename, debug):
     code = open(filename).read()
     tokens = java.tokenizer.tokenize(code)
+    parser = java.parser.Parser(tokens)
+    parser.set_debug(debug)
 
     try:
-        return java.parser.parse(tokens)
+        return parser.parse()
     except java.parser.JavaSyntaxError as e:
         sys.stderr.write('Error in {0}\n'.format(filename))
         sys.stderr.write(e.description + '\n')
@@ -21,15 +23,24 @@ def parse_file(filename):
         sys.stderr.write('Error in {0}\n'.format(filename))
         sys.stderr.write(unicode(e) + '\n\n')
 
+    except Exception:
+        print filename
+        print parser.tokens.look()
+        raise
+
 def dump(ast):
     for path, node in ast:
         path = "->".join(["{0[0]}[{0[1]}]".format(p) for p in path])
         node = {attr : getattr(node, attr) for attr in node.attrs if isinstance(getattr(node, attr), (set, basestring))}
         print path, node
 
-def process(paths, walk=False):
+def process(args):
     import os
     import time
+
+    paths = args.paths
+    walk = args.walk
+    debug = args.debug
 
     files_processed = list()
     start_time = time.time()
@@ -37,7 +48,7 @@ def process(paths, walk=False):
     for path in paths:
         if path.endswith('.java'):
             files_processed.append(path)
-            ast = parse_file(path)
+            ast = parse_file(path, debug)
 
             if not ast:
                 sys.exit(1)
@@ -50,7 +61,7 @@ def process(paths, walk=False):
 
                 for filename in filenames:
                     source_file = os.path.join(dirpath, filename)
-                    ast = parse_file(source_file)
+                    ast = parse_file(source_file, debug)
 
                     if not ast:
                         sys.exit(1)
@@ -77,20 +88,15 @@ def main():
                         help='directory or file to process')
     args = parser.parse_args()
 
-    if args.debug:
-        java.parser.enable_debug()
-    else:
-        java.parser.disable_debug()
-
     if args.profile:
         import cProfile as profile
         import pstats
-        profile.runctx('process(args.paths, args.walk)', globals(), locals(), 'prof.txt')
+        profile.runctx('process(args)', globals(), locals(), 'prof.txt')
         stats = pstats.Stats('prof.txt')
         stats.sort_stats('time')
         stats.print_stats()
     else:
-        process(args.paths, args.walk)
+        process(args)
 
 if __name__ == '__main__':
     main()

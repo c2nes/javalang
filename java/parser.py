@@ -8,54 +8,30 @@ from tokenizer import (
     Annotation, Literal, Operator, JavaToken
     )
 
-ENABLE_TRACE_SUPPORT = True
-DEBUG = False
-
-# ------------------------------------------------------------------------------
-# ---- Helper methods ----
-
-def is_annotation(tokens, i=0):
-    """ Returns true if the position is the start of an annotation application
-    (as opposed to an annotation declaration)
-
-    """
-
-    return (isinstance(tokens.look(i), Annotation) and
-            not tokens.look(i + 1).value == 'interface')
-
-def is_annotation_declaration(tokens, i=0):
-    """ Returns true if the position is the start of an annotation application
-    (as opposed to an annotation declaration)
-
-    """
-
-    return (isinstance(tokens.look(i), Annotation) and
-            tokens.look(i + 1).value == 'interface')
+ENABLE_DEBUG_SUPPORT = True
 
 def parse_debug(method):
-    global ENABLE_TRACE_SUPPORT
+    global ENABLE_DEBUG_SUPPORT
 
-    if ENABLE_TRACE_SUPPORT:
-        global _debug_level
-        _debug_level = 0
+    if ENABLE_DEBUG_SUPPORT:
+        def _method(self):
+            if not hasattr(self, 'recursion_depth'):
+                self.recursion_depth = 0
 
-        def _method(tokens):
-            global DEBUG, _debug_level
-
-            if DEBUG:
-                depth = "{0:2}".format(_debug_level)
-                token = unicode(tokens.look())
-                start_value = tokens.look().value
+            if self.debug:
+                depth = "{0:2}".format(self.recursion_depth)
+                token = unicode(self.tokens.look())
+                start_value = self.tokens.look().value
                 name = method.__name__
-                sep = ("-" * _debug_level)
+                sep = ("-" * self.recursion_depth)
                 e_message = ""
 
                 print "{0} {1}> {2}({3})".format(depth, sep, name, token)
 
-                _debug_level += 1
+                self.recursion_depth += 1
 
                 try:
-                    r = method(tokens)
+                    r = method(self)
 
                 except JavaSyntaxError as e:
                     e_message = e.description
@@ -66,16 +42,16 @@ def parse_debug(method):
                     raise
 
                 finally:
-                    token = unicode(tokens.last())
+                    token = unicode(self.tokens.last())
                     print "{0} <{1} {2}({3}, {4}) {5}".format(
                         depth, sep, name, start_value, token, e_message)
-                    _debug_level -= 1
+                    self.recursion_depth -= 1
             else:
-                _debug_level += 1
+                self.recursion_depth += 1
                 try:
-                    r = method(tokens)
+                    r = method(self)
                 finally:
-                    _debug_level -= 1
+                    self.recursion_depth -= 1
 
             return r
 
@@ -83,83 +59,6 @@ def parse_debug(method):
 
     else:
         return method
-
-def accept(tokens, *accepts):
-    last = None
-
-    if len(accepts) == 0:
-        raise JavaParserError("Missing acceptable values")
-
-    for accept in accepts:
-        token = tokens.next()
-
-        if isinstance(accept, basestring) and not token.value == accept:
-            raise JavaSyntaxError("Expected '{0}'".format(accept))
-        elif isinstance(accept, type) and not isinstance(token, accept):
-            raise JavaSyntaxError("Expected {0}".format(accept.__name__))
-
-        last = token
-
-    return last.value
-
-def would_accept(tokens, *accepts):
-    if len(accepts) == 0:
-        raise JavaParserError("Missing acceptable values")
-
-    for i, accept in enumerate(accepts):
-        token = tokens.look(i)
-
-        if isinstance(accept, basestring) and not token.value == accept:
-            return False
-        elif isinstance(accept, type) and not isinstance(token, accept):
-            return False
-
-    return True
-
-def try_accept(tokens, *accepts):
-    if len(accepts) == 0:
-        raise JavaParserError("Missing acceptable values")
-
-    for i, accept in enumerate(accepts):
-        token = tokens.look(i)
-
-        if isinstance(accept, basestring) and not token.value == accept:
-            return False
-        elif isinstance(accept, type) and not isinstance(token, accept):
-            return False
-
-    for i in range(0, len(accepts)):
-        tokens.next()
-
-    return True
-
-def build_binary_operation(parts, start_level=0):
-    if len(parts) == 1:
-        return parts[0]
-
-    precedence = [ set(('||',)),
-                   set(('&&',)),
-                   set(('|',)),
-                   set(('^',)),
-                   set(('&',)),
-                   set(('==', '!=')),
-                   set(('<', '>', '>=', '<=', 'instanceof')),
-                   set(('<<', '>>', '>>>')),
-                   set(('+', '-')),
-                   set(('*', '/', '%')) ]
-
-    for level in range(start_level, len(precedence)):
-        for i in xrange(len(parts) - 2, 0, -2):
-            if parts[i] in precedence[level]:
-                operator = parts[i]
-                operandl = build_binary_operation(parts[:i], level)
-                operandr = build_binary_operation(parts[i+1:], level + 1)
-
-                return tree.BinaryOperation(operator=operator,
-                                           operandl=operandl,
-                                           operandr=operandr)
-
-    raise JavaParserError("Failed to build binary operation")
 
 # ------------------------------------------------------------------------------
 # ---- Parsing exception ----
@@ -179,2072 +78,2176 @@ class JavaParserError(JavaParserBaseException):
     pass
 
 # ------------------------------------------------------------------------------
+# ---- Parser class ----
+
+class Parser(object):
+    def __init__(self, tokens):
+        self.tokens = util.LookAheadListIterator(tokens)
+        self.tokens.set_default(EndOfInput(None))
+
+        self.debug = False
+
+# ------------------------------------------------------------------------------
+# ---- Debug control ----
+
+    def set_debug(self, debug=True):
+        self.debug = debug
+
+# ------------------------------------------------------------------------------
+# ---- Parsing entry point ----
+
+    def parse(self):
+        return self.parse_compilation_unit()
+
+# ------------------------------------------------------------------------------
+# ---- Helper methods ----
+
+    def illegal(self, description, at=None):
+        if not at:
+            at = self.tokens.look()
+
+        raise JavaSyntaxError(description, at)
+
+    def accept(self, *accepts):
+        last = None
+
+        if len(accepts) == 0:
+            raise JavaParserError("Missing acceptable values")
+
+        for accept in accepts:
+            token = self.tokens.next()
+
+            if isinstance(accept, basestring) and not token.value == accept:
+                self.illegal("Expected '{0}'".format(accept))
+            elif isinstance(accept, type) and not isinstance(token, accept):
+                self.illegal("Expected {0}".format(accept.__name__))
+
+            last = token
+
+        return last.value
+
+    def would_accept(self, *accepts):
+        if len(accepts) == 0:
+            raise JavaParserError("Missing acceptable values")
+
+        for i, accept in enumerate(accepts):
+            token = self.tokens.look(i)
+
+            if isinstance(accept, basestring) and not token.value == accept:
+                return False
+            elif isinstance(accept, type) and not isinstance(token, accept):
+                return False
+
+        return True
+
+    def try_accept(self, *accepts):
+        if len(accepts) == 0:
+            raise JavaParserError("Missing acceptable values")
+
+        for i, accept in enumerate(accepts):
+            token = self.tokens.look(i)
+
+            if isinstance(accept, basestring) and not token.value == accept:
+                return False
+            elif isinstance(accept, type) and not isinstance(token, accept):
+                return False
+
+        for i in range(0, len(accepts)):
+            self.tokens.next()
+
+        return True
+
+    def build_binary_operation(self, parts, start_level=0):
+        if len(parts) == 1:
+            return parts[0]
+
+        precedence = [ set(('||',)),
+                       set(('&&',)),
+                       set(('|',)),
+                       set(('^',)),
+                       set(('&',)),
+                       set(('==', '!=')),
+                       set(('<', '>', '>=', '<=', 'instanceof')),
+                       set(('<<', '>>', '>>>')),
+                       set(('+', '-')),
+                       set(('*', '/', '%')) ]
+
+        for level in range(start_level, len(precedence)):
+            for i in xrange(len(parts) - 2, 0, -2):
+                if parts[i] in precedence[level]:
+                    operator = parts[i]
+                    operandl = self.build_binary_operation(parts[:i], level)
+                    operandr = self.build_binary_operation(parts[i+1:], level + 1)
+
+                    return tree.BinaryOperation(operator=operator,
+                                               operandl=operandl,
+                                               operandr=operandr)
+
+        raise JavaParserError("Failed to build binary operation")
+
+    def is_annotation(self, i=0):
+        """ Returns true if the position is the start of an annotation application
+        (as opposed to an annotation declaration)
+
+        """
+
+        return (isinstance(self.tokens.look(i), Annotation)
+                and not self.tokens.look(i + 1).value == 'interface')
+
+    def is_annotation_declaration(self, i=0):
+        """ Returns true if the position is the start of an annotation application
+        (as opposed to an annotation declaration)
+
+        """
+
+        return (isinstance(self.tokens.look(i), Annotation)
+                and self.tokens.look(i + 1).value == 'interface')
+
+# ------------------------------------------------------------------------------
 # ---- Parsing methods ----
 
 # ------------------------------------------------------------------------------
 # -- Identifiers --
 
-@parse_debug
-def parse_identifier(tokens):
-    return accept(tokens, Identifier)
+    @parse_debug
+    def parse_identifier(self):
+        return self.accept(Identifier)
 
-@parse_debug
-def parse_qualified_identifier(tokens):
-    qualified_identifier = list()
+    @parse_debug
+    def parse_qualified_identifier(self):
+        qualified_identifier = list()
 
-    while True:
-        identifier = parse_identifier(tokens)
-        qualified_identifier.append(identifier)
+        while True:
+            identifier = self.parse_identifier()
+            qualified_identifier.append(identifier)
 
-        if not try_accept(tokens, '.'):
-            break
+            if not self.try_accept('.'):
+                break
 
-    return '.'.join(qualified_identifier)
+        return '.'.join(qualified_identifier)
 
-@parse_debug
-def parse_qualified_identifier_list(tokens):
-    qualified_identifiers = list()
+    @parse_debug
+    def parse_qualified_identifier_list(self):
+        qualified_identifiers = list()
 
-    while True:
-        qualified_identifier = parse_qualified_identifier(tokens)
-        qualified_identifiers.append(qualified_identifier)
+        while True:
+            qualified_identifier = self.parse_qualified_identifier()
+            qualified_identifiers.append(qualified_identifier)
 
-        if not try_accept(tokens, ','):
-            break
+            if not self.try_accept(','):
+                break
 
-    return qualified_identifiers
+        return qualified_identifiers
 
 # ------------------------------------------------------------------------------
 # -- Top level units --
 
-@parse_debug
-def parse_compilation_unit(tokens):
-    package = None
-    package_annotations = None
-    import_declarations = list()
-    type_declarations = list()
-
-    tokens.push_marker()
-    if is_annotation(tokens):
-        package_annotations = parse_annotations(tokens)
-
-    if try_accept(tokens, 'package'):
-        tokens.pop_marker(False)
-        package_name = parse_qualified_identifier(tokens)
-        package = tree.PackageDeclaration(annotations=package_annotations,
-                                          name=package_name)
-        accept(tokens, ';')
-    else:
-        tokens.pop_marker(True)
+    @parse_debug
+    def parse_compilation_unit(self):
+        package = None
         package_annotations = None
+        import_declarations = list()
+        type_declarations = list()
 
-    while would_accept(tokens, 'import'):
-        import_declaration = parse_import_declaration(tokens)
-        import_declarations.append(import_declaration)
+        self.tokens.push_marker()
+        if self.is_annotation():
+            package_annotations = self.parse_annotations()
 
-    while not isinstance(tokens.look(), EndOfInput):
-        try:
-            type_declaration = parse_type_declaration(tokens)
-        except StopIteration:
-            raise JavaSyntaxError("Unexpected end of input")
+        if self.try_accept('package'):
+            self.tokens.pop_marker(False)
+            package_name = self.parse_qualified_identifier()
+            package = tree.PackageDeclaration(annotations=package_annotations,
+                                              name=package_name)
+            self.accept(';')
+        else:
+            self.tokens.pop_marker(True)
+            package_annotations = None
 
-        if type_declaration:
-            type_declarations.append(type_declaration)
+        while self.would_accept('import'):
+            import_declaration = self.parse_import_declaration()
+            import_declarations.append(import_declaration)
 
-    return tree.CompilationUnit(package=package,
-                               imports=import_declarations,
-                               types=type_declarations)
+        while not isinstance(self.tokens.look(), EndOfInput):
+            try:
+                type_declaration = self.parse_type_declaration()
+            except StopIteration:
+                self.illegal("Unexpected end of input")
 
-@parse_debug
-def parse_import_declaration(tokens):
-    qualified_identifier = list()
-    static = False
-    import_all = False
+            if type_declaration:
+                type_declarations.append(type_declaration)
 
-    accept(tokens, 'import')
+        return tree.CompilationUnit(package=package,
+                                   imports=import_declarations,
+                                   types=type_declarations)
 
-    if try_accept(tokens, 'static'):
-        static = True
+    @parse_debug
+    def parse_import_declaration(self):
+        qualified_identifier = list()
+        static = False
+        import_all = False
 
-    while True:
-        identifier = parse_identifier(tokens)
-        qualified_identifier.append(identifier)
+        self.accept('import')
 
-        if try_accept(tokens, '.'):
-            if try_accept(tokens, '*'):
-                accept(tokens, ';')
-                import_all = True
+        if self.try_accept('static'):
+            static = True
+
+        while True:
+            identifier = self.parse_identifier()
+            qualified_identifier.append(identifier)
+
+            if self.try_accept('.'):
+                if self.try_accept('*'):
+                    self.accept(';')
+                    import_all = True
+                    break
+
+            else:
+                self.accept(';')
                 break
 
+        return tree.Import(path='.'.join(qualified_identifier),
+                           static=static,
+                           wildcard=import_all)
+
+    @parse_debug
+    def parse_type_declaration(self):
+        if self.try_accept(';'):
+            return None
         else:
-            accept(tokens, ';')
-            break
+            return self.parse_class_or_interface_declaration()
 
-    return tree.Import(path='.'.join(qualified_identifier),
-                       static=static,
-                       wildcard=import_all)
+    @parse_debug
+    def parse_class_or_interface_declaration(self):
+        modifiers, annotations = self.parse_modifiers()
+        type_declaration = None
 
-@parse_debug
-def parse_type_declaration(tokens):
-    if try_accept(tokens, ';'):
-        return None
-    else:
-        return parse_class_or_interface_declaration(tokens)
+        token = self.tokens.look()
+        if token.value == 'class':
+            type_declaration = self.parse_normal_class_declaration()
+        elif token.value == 'enum':
+            type_declaration = self.parse_enum_declaration()
+        elif token.value == 'interface':
+            type_declaration = self.parse_normal_interface_declaration()
+        elif self.is_annotation_declaration():
+            type_declaration = self.parse_annotation_type_declaration()
+        else:
+            self.illegal("Expected type declaration")
 
-@parse_debug
-def parse_class_or_interface_declaration(tokens):
-    modifiers, annotations = parse_modifiers(tokens)
-    type_declaration = None
+        type_declaration.modifiers = modifiers
+        type_declaration.annotations = annotations
 
-    token = tokens.look()
-    if token.value == 'class':
-        type_declaration = parse_normal_class_declaration(tokens)
-    elif token.value == 'enum':
-        type_declaration = parse_enum_declaration(tokens)
-    elif token.value == 'interface':
-        type_declaration = parse_normal_interface_declaration(tokens)
-    elif is_annotation_declaration(tokens):
-        type_declaration = parse_annotation_type_declaration(tokens)
-    else:
-        raise JavaSyntaxError("Expected type declaration")
+        return type_declaration
 
-    type_declaration.modifiers = modifiers
-    type_declaration.annotations = annotations
+    @parse_debug
+    def parse_normal_class_declaration(self):
+        name = None
+        type_params = None
+        extends = None
+        implements = None
+        body = None
 
-    return type_declaration
+        self.accept('class')
 
-@parse_debug
-def parse_normal_class_declaration(tokens):
-    name = None
-    type_params = None
-    extends = None
-    implements = None
-    body = None
+        name = self.parse_identifier()
 
-    accept(tokens, 'class')
+        if self.would_accept('<'):
+            type_params = self.parse_type_parameters()
 
-    name = parse_identifier(tokens)
+        if self.try_accept('extends'):
+            extends = self.parse_type()
 
-    if would_accept(tokens, '<'):
-        type_params = parse_type_parameters(tokens)
+        if self.try_accept('implements'):
+            implements = self.parse_type_list()
 
-    if try_accept(tokens, 'extends'):
-        extends = parse_type(tokens)
+        body = self.parse_class_body()
 
-    if try_accept(tokens, 'implements'):
-        implements = parse_type_list(tokens)
-
-    body = parse_class_body(tokens)
-
-    return tree.ClassDeclaration(name=name,
-                                type_parameters=type_params,
-                                extends=extends,
-                                implements=implements,
-                                body=body)
-
-@parse_debug
-def parse_enum_declaration(tokens):
-    name = None
-    implements = None
-    body = None
-
-    accept(tokens, 'enum')
-    name = parse_identifier(tokens)
-
-    if try_accept(tokens, 'implements'):
-        implements = parse_type_list(tokens)
-
-    body = parse_enum_body(tokens)
-
-    return tree.EnumDeclaration(name=name,
-                               implements=implements,
-                               body=body)
-
-@parse_debug
-def parse_normal_interface_declaration(tokens):
-    name = None
-    type_parameters = None
-    extends = None
-    body = None
-
-    accept(tokens, 'interface')
-    name = parse_identifier(tokens)
-
-    if would_accept(tokens, '<'):
-        type_parameters = parse_type_parameters(tokens)
-
-    if try_accept(tokens, 'extends'):
-        extends = parse_type_list(tokens)
-
-    body = parse_interface_body(tokens)
-
-    return tree.InterfaceDeclaration(name=name,
-                                    type_parameters=type_parameters,
+        return tree.ClassDeclaration(name=name,
+                                    type_parameters=type_params,
                                     extends=extends,
+                                    implements=implements,
                                     body=body)
 
-@parse_debug
-def parse_annotation_type_declaration(tokens):
-    name = None
-    body = None
+    @parse_debug
+    def parse_enum_declaration(self):
+        name = None
+        implements = None
+        body = None
 
-    accept(tokens, '@', 'interface')
+        self.accept('enum')
+        name = self.parse_identifier()
 
-    name = parse_identifier(tokens)
-    body = parse_annotation_type_body(tokens)
+        if self.try_accept('implements'):
+            implements = self.parse_type_list()
 
-    return tree.AnnotationDeclaration(name=name,
-                                     body=body)
+        body = self.parse_enum_body()
+
+        return tree.EnumDeclaration(name=name,
+                                   implements=implements,
+                                   body=body)
+
+    @parse_debug
+    def parse_normal_interface_declaration(self):
+        name = None
+        type_parameters = None
+        extends = None
+        body = None
+
+        self.accept('interface')
+        name = self.parse_identifier()
+
+        if self.would_accept('<'):
+            type_parameters = self.parse_type_parameters()
+
+        if self.try_accept('extends'):
+            extends = self.parse_type_list()
+
+        body = self.parse_interface_body()
+
+        return tree.InterfaceDeclaration(name=name,
+                                        type_parameters=type_parameters,
+                                        extends=extends,
+                                        body=body)
+
+    @parse_debug
+    def parse_annotation_type_declaration(self):
+        name = None
+        body = None
+
+        self.accept('@', 'interface')
+
+        name = self.parse_identifier()
+        body = self.parse_annotation_type_body()
+
+        return tree.AnnotationDeclaration(name=name,
+                                         body=body)
 
 # ------------------------------------------------------------------------------
 # -- Types --
 
-@parse_debug
-def parse_type(tokens):
-    java_type = None
+    @parse_debug
+    def parse_type(self):
+        java_type = None
 
-    if isinstance(tokens.look(), BasicType):
-        java_type = parse_basic_type(tokens)
-    elif isinstance(tokens.look(), Identifier):
-        java_type = parse_reference_type(tokens)
-    else:
-        raise JavaSyntaxError("Expected type")
-
-    java_type.dimensions = parse_array_dimension(tokens)
-
-    return java_type
-
-@parse_debug
-def parse_basic_type(tokens):
-    return tree.BasicType(name=accept(tokens, BasicType))
-
-@parse_debug
-def parse_reference_type(tokens):
-    reference_type = tree.ReferenceType()
-    tail = reference_type
-
-    while True:
-        tail.name = parse_identifier(tokens)
-
-        if would_accept(tokens, '<'):
-            tail.arguments = parse_type_arguments(tokens)
-
-        if try_accept(tokens, '.'):
-            tail.sub_type = tree.ReferenceType()
-            tail = tail.sub_type
+        if isinstance(self.tokens.look(), BasicType):
+            java_type = self.parse_basic_type()
+        elif isinstance(self.tokens.look(), Identifier):
+            java_type = self.parse_reference_type()
         else:
-            break
+            self.illegal("Expected type")
 
-    return reference_type
+        java_type.dimensions = self.parse_array_dimension()
 
-@parse_debug
-def parse_type_arguments(tokens):
-    type_arguments = list()
+        return java_type
 
-    accept(tokens, '<')
+    @parse_debug
+    def parse_basic_type(self):
+        return tree.BasicType(name=self.accept(BasicType))
 
-    while True:
-        type_argument = parse_type_argument(tokens)
-        type_arguments.append(type_argument)
-
-        if try_accept(tokens, '>'):
-            break
-
-        accept(tokens, ',')
-
-    return type_arguments
-
-@parse_debug
-def parse_type_argument(tokens):
-    pattern_type = None
-    base_type = None
-
-    if try_accept(tokens, '?'):
-        wildcard = True
-
-        if tokens.look().value in ('extends', 'super'):
-            pattern_type = tokens.next().value
-        else:
-            return tree.TypeArgument(pattern_type='?')
-
-    if would_accept(tokens, BasicType):
-        base_type = parse_basic_type(tokens)
-        accept(tokens, '[', ']')
-        base_type.dimensions = [None]
-    else:
-        base_type = parse_reference_type(tokens)
-        base_type.dimensions = []
-
-    base_type.dimensions += parse_array_dimension(tokens)
-
-    return tree.TypeArgument(type=base_type,
-                            pattern_type=pattern_type)
-
-@parse_debug
-def parse_nonwildcard_type_arguments(tokens):
-    accept(tokens, '<')
-    type_arguments = parse_type_list(tokens)
-    accept(tokens, '>')
-
-    return [tree.TypeArgument(type=t) for t in type_arguments]
-
-@parse_debug
-def parse_type_list(tokens):
-    types = list()
-
-    while True:
-        if would_accept(tokens, BasicType):
-            base_type = parse_basic_type(tokens)
-            accept(tokens, '[', ']')
-            base_type.dimensions = [None]
-        else:
-            base_type = parse_reference_type(tokens)
-            base_type.dimensions = []
-
-        base_type.dimensions += parse_array_dimension(tokens)
-        types.append(base_type)
-
-        if not try_accept(tokens, ','):
-            break
-
-    return types
-
-@parse_debug
-def parse_type_arguments_or_diamond(tokens):
-    if try_accept(tokens, '<', '>'):
-        return list()
-    else:
-        return parse_type_arguments(tokens)
-
-@parse_debug
-def parse_nonwildcard_type_arguments_or_diamond(tokens):
-    if try_accept(tokens, '<', '>'):
-        return list()
-    else:
-        return parse_nonwildcard_type_arguments(tokens)
-
-@parse_debug
-def parse_type_parameters(tokens):
-    type_parameters = list()
-
-    accept(tokens, '<')
-
-    while True:
-        type_parameter = parse_type_parameter(tokens)
-        type_parameters.append(type_parameter)
-
-        if try_accept(tokens, '>'):
-            break
-        else:
-            accept(tokens, ',')
-
-    return type_parameters
-
-@parse_debug
-def parse_type_parameter(tokens):
-    identifier = parse_identifier(tokens)
-    extends = None
-
-    if try_accept(tokens, 'extends'):
-        extends = list()
+    @parse_debug
+    def parse_reference_type(self):
+        reference_type = tree.ReferenceType()
+        tail = reference_type
 
         while True:
-            reference_type = parse_reference_type(tokens)
-            extends.append(reference_type)
+            tail.name = self.parse_identifier()
 
-            if not try_accept(tokens, '&'):
+            if self.would_accept('<'):
+                tail.arguments = self.parse_type_arguments()
+
+            if self.try_accept('.'):
+                tail.sub_type = tree.ReferenceType()
+                tail = tail.sub_type
+            else:
                 break
 
-    return tree.TypeParameter(name=identifier,
-                             extends=extends)
+        return reference_type
 
-@parse_debug
-def parse_array_dimension(tokens):
-    array_dimension = 0
+    @parse_debug
+    def parse_type_arguments(self):
+        type_arguments = list()
 
-    while try_accept(tokens, '[', ']'):
-        array_dimension += 1
+        self.accept('<')
 
-    return [None] * array_dimension
+        while True:
+            type_argument = self.parse_type_argument()
+            type_arguments.append(type_argument)
+
+            if self.try_accept('>'):
+                break
+
+            self.accept(',')
+
+        return type_arguments
+
+    @parse_debug
+    def parse_type_argument(self):
+        pattern_type = None
+        base_type = None
+
+        if self.try_accept('?'):
+            wildcard = True
+
+            if self.tokens.look().value in ('extends', 'super'):
+                pattern_type = self.tokens.next().value
+            else:
+                return tree.TypeArgument(pattern_type='?')
+
+        if self.would_accept(BasicType):
+            base_type = self.parse_basic_type()
+            self.accept('[', ']')
+            base_type.dimensions = [None]
+        else:
+            base_type = self.parse_reference_type()
+            base_type.dimensions = []
+
+        base_type.dimensions += self.parse_array_dimension()
+
+        return tree.TypeArgument(type=base_type,
+                                pattern_type=pattern_type)
+
+    @parse_debug
+    def parse_nonwildcard_type_arguments(self):
+        self.accept('<')
+        type_arguments = self.parse_type_list()
+        self.accept('>')
+
+        return [tree.TypeArgument(type=t) for t in type_arguments]
+
+    @parse_debug
+    def parse_type_list(self):
+        types = list()
+
+        while True:
+            if self.would_accept(BasicType):
+                base_type = self.parse_basic_type()
+                self.accept('[', ']')
+                base_type.dimensions = [None]
+            else:
+                base_type = self.parse_reference_type()
+                base_type.dimensions = []
+
+            base_type.dimensions += self.parse_array_dimension()
+            types.append(base_type)
+
+            if not self.try_accept(','):
+                break
+
+        return types
+
+    @parse_debug
+    def parse_type_arguments_or_diamond(self):
+        if self.try_accept('<', '>'):
+            return list()
+        else:
+            return self.parse_type_arguments()
+
+    @parse_debug
+    def parse_nonwildcard_type_arguments_or_diamond(self):
+        if self.try_accept('<', '>'):
+            return list()
+        else:
+            return self.parse_nonwildcard_type_arguments()
+
+    @parse_debug
+    def parse_type_parameters(self):
+        type_parameters = list()
+
+        self.accept('<')
+
+        while True:
+            type_parameter = self.parse_type_parameter()
+            type_parameters.append(type_parameter)
+
+            if self.try_accept('>'):
+                break
+            else:
+                self.accept(',')
+
+        return type_parameters
+
+    @parse_debug
+    def parse_type_parameter(self):
+        identifier = self.parse_identifier()
+        extends = None
+
+        if self.try_accept('extends'):
+            extends = list()
+
+            while True:
+                reference_type = self.parse_reference_type()
+                extends.append(reference_type)
+
+                if not self.try_accept('&'):
+                    break
+
+        return tree.TypeParameter(name=identifier,
+                                 extends=extends)
+
+    @parse_debug
+    def parse_array_dimension(self):
+        array_dimension = 0
+
+        while self.try_accept('[', ']'):
+            array_dimension += 1
+
+        return [None] * array_dimension
 
 # ------------------------------------------------------------------------------
 # -- Annotations and modifiers --
 
-@parse_debug
-def parse_modifiers(tokens):
-    annotations = list()
-    modifiers = set()
+    @parse_debug
+    def parse_modifiers(self):
+        annotations = list()
+        modifiers = set()
 
-    while True:
-        if would_accept(tokens, Modifier):
-            modifiers.add(accept(tokens, Modifier))
+        while True:
+            if self.would_accept(Modifier):
+                modifiers.add(self.accept(Modifier))
 
-        elif is_annotation(tokens):
-            annotation = parse_annotation(tokens)
+            elif self.is_annotation():
+                annotation = self.parse_annotation()
+                annotations.append(annotation)
+
+            else:
+                break
+
+        return (modifiers, annotations)
+
+    @parse_debug
+    def parse_annotations(self):
+        annotations = list()
+
+        while True:
+            annotation = self.parse_annotation()
             annotations.append(annotation)
 
+            if not self.is_annotation():
+                break
+
+        return annotations
+
+    @parse_debug
+    def parse_annotation(self):
+        qualified_identifier = None
+        annotation_element = None
+
+        self.accept('@')
+        qualified_identifier = self.parse_qualified_identifier()
+
+        if self.try_accept('('):
+            if not self.would_accept(')'):
+                annotation_element = self.parse_annotation_element()
+            self.accept(')')
+
+        return tree.Annotation(annotation=qualified_identifier,
+                              element=annotation_element)
+
+    @parse_debug
+    def parse_annotation_element(self):
+        if self.would_accept(Identifier, '='):
+            return self.parse_element_value_pairs()
         else:
-            break
+            return self.parse_element_value()
 
-    return (modifiers, annotations)
+    @parse_debug
+    def parse_element_value_pairs(self):
+        pairs = list()
 
-@parse_debug
-def parse_annotations(tokens):
-    annotations = list()
+        while True:
+            pair = self.parse_element_value_pair()
+            pairs.append(pair)
 
-    while True:
-        annotation = parse_annotation(tokens)
-        annotations.append(annotation)
+            if not self.try_accept(','):
+                break
 
-        if not is_annotation(tokens):
-            break
+        return pairs
 
-    return annotations
+    @parse_debug
+    def parse_element_value_pair(self):
+        identifier = self.parse_identifier()
+        self.accept('=')
+        value = self.parse_element_value()
 
-@parse_debug
-def parse_annotation(tokens):
-    qualified_identifier = None
-    annotation_element = None
+        return tree.ElementValuePair(name=identifier,
+                                    value=value)
 
-    accept(tokens, '@')
-    qualified_identifier = parse_qualified_identifier(tokens)
+    @parse_debug
+    def parse_element_value(self):
+        if self.is_annotation():
+            return self.parse_annotation()
 
-    if try_accept(tokens, '('):
-        if not would_accept(tokens, ')'):
-            annotation_element = parse_annotation_element(tokens)
-        accept(tokens, ')')
+        elif self.would_accept('{'):
+            return self.parse_element_value_array_initializer()
 
-    return tree.Annotation(annotation=qualified_identifier,
-                          element=annotation_element)
+        else:
+            return self.parse_expressionl()
 
-@parse_debug
-def parse_annotation_element(tokens):
-    if would_accept(tokens, Identifier, '='):
-        return parse_element_value_pairs(tokens)
-    else:
-        return parse_element_value(tokens)
+    @parse_debug
+    def parse_element_value_array_initializer(self):
+        self.accept('{')
 
-@parse_debug
-def parse_element_value_pairs(tokens):
-    pairs = list()
+        if self.try_accept('}'):
+            return list()
 
-    while True:
-        pair = parse_element_value_pair(tokens)
-        pairs.append(pair)
+        element_values = self.parse_element_values()
+        self.try_accept(',')
+        self.accept('}')
 
-        if not try_accept(tokens, ','):
-            break
+        return tree.ElementArrayValue(values=element_values)
 
-    return pairs
+    @parse_debug
+    def parse_element_values(self):
+        element_values = list()
 
-@parse_debug
-def parse_element_value_pair(tokens):
-    identifier = parse_identifier(tokens)
-    accept(tokens, '=')
-    value = parse_element_value(tokens)
+        while True:
+            element_value = self.parse_element_value()
+            element_values.append(element_value)
 
-    return tree.ElementValuePair(name=identifier,
-                                value=value)
+            if self.would_accept('}') or self.would_accept(',', '}'):
+                break
 
-@parse_debug
-def parse_element_value(tokens):
-    if is_annotation(tokens):
-        return parse_annotation(tokens)
+            self.accept(',')
 
-    elif would_accept(tokens, '{'):
-        return parse_element_value_array_initializer(tokens)
-
-    else:
-        return parse_expressionl(tokens)
-
-@parse_debug
-def parse_element_value_array_initializer(tokens):
-    accept(tokens, '{')
-
-    if try_accept(tokens, '}'):
-        return list()
-
-    element_values = parse_element_values(tokens)
-    try_accept(tokens, ',')
-    accept(tokens, '}')
-
-    return tree.ElementArrayValue(values=element_values)
-
-@parse_debug
-def parse_element_values(tokens):
-    element_values = list()
-
-    while True:
-        element_value = parse_element_value(tokens)
-        element_values.append(element_value)
-
-        if would_accept(tokens, '}') or would_accept(tokens, ',', '}'):
-            break
-
-        accept(tokens, ',')
-
-    return element_value
+        return element_value
 
 # ------------------------------------------------------------------------------
 # -- Class body --
 
-@parse_debug
-def parse_class_body(tokens):
-    declarations = list()
+    @parse_debug
+    def parse_class_body(self):
+        declarations = list()
 
-    accept(tokens, '{')
+        self.accept('{')
 
-    while not would_accept(tokens, '}'):
-        declaration = parse_class_body_declaration(tokens)
-        if declaration:
-            declarations.append(declaration)
+        while not self.would_accept('}'):
+            declaration = self.parse_class_body_declaration()
+            if declaration:
+                declarations.append(declaration)
 
-    accept(tokens, '}')
+        self.accept('}')
 
-    return declarations
+        return declarations
 
-@parse_debug
-def parse_class_body_declaration(tokens):
-    token = tokens.look()
+    @parse_debug
+    def parse_class_body_declaration(self):
+        token = self.tokens.look()
 
-    if try_accept(tokens, ';'):
-        return None
+        if self.try_accept(';'):
+            return None
 
-    elif would_accept(tokens, 'static', '{'):
-        accept(tokens, 'static')
-        return parse_block(tokens)
+        elif self.would_accept('static', '{'):
+            self.accept('static')
+            return self.parse_block()
 
-    elif would_accept(tokens, '{'):
-        return parse_block(tokens)
+        elif self.would_accept('{'):
+            return self.parse_block()
 
-    else:
-        return parse_member_declaration(tokens)
+        else:
+            return self.parse_member_declaration()
 
-@parse_debug
-def parse_member_declaration(tokens):
-    modifiers, annotations = parse_modifiers(tokens)
-    member = None
+    @parse_debug
+    def parse_member_declaration(self):
+        modifiers, annotations = self.parse_modifiers()
+        member = None
 
-    token = tokens.look()
-    if try_accept(tokens, 'void'):
-        method_name = parse_identifier(tokens)
-        member = parse_void_method_declarator_rest(tokens)
-        member.name = method_name
+        token = self.tokens.look()
+        if self.try_accept('void'):
+            method_name = self.parse_identifier()
+            member = self.parse_void_method_declarator_rest()
+            member.name = method_name
 
-    elif token.value == '<':
-        member = parse_generic_method_or_constructor_declaration(tokens)
+        elif token.value == '<':
+            member = self.parse_generic_method_or_constructor_declaration()
 
-    elif token.value == 'class':
-        member = parse_normal_class_declaration(tokens)
+        elif token.value == 'class':
+            member = self.parse_normal_class_declaration()
 
-    elif token.value == 'enum':
-        member = parse_enum_declaration(tokens)
+        elif token.value == 'enum':
+            member = self.parse_enum_declaration()
 
-    elif token.value == 'interface':
-        member = parse_normal_interface_declaration(tokens)
+        elif token.value == 'interface':
+            member = self.parse_normal_interface_declaration()
 
-    elif is_annotation_declaration(tokens):
-        member = parse_annotation_type_declaration(tokens)
+        elif self.is_annotation_declaration():
+            member = self.parse_annotation_type_declaration()
 
-    elif would_accept(tokens, Identifier, '('):
-        constructor_name = parse_identifier(tokens)
-        member = parse_constructor_declarator_rest(tokens)
-        member.name = constructor_name
+        elif self.would_accept(Identifier, '('):
+            constructor_name = self.parse_identifier()
+            member = self.parse_constructor_declarator_rest()
+            member.name = constructor_name
 
-    else:
-        member = parse_method_or_field_declaraction(tokens)
+        else:
+            member = self.parse_method_or_field_declaraction()
 
-    member.modifiers = modifiers
-    member.annotations = annotations
+        member.modifiers = modifiers
+        member.annotations = annotations
 
-    return member
+        return member
 
-@parse_debug
-def parse_method_or_field_declaraction(tokens):
-    member_type = parse_type(tokens)
-    member_name = parse_identifier(tokens)
+    @parse_debug
+    def parse_method_or_field_declaraction(self):
+        member_type = self.parse_type()
+        member_name = self.parse_identifier()
 
-    member = parse_method_or_field_rest(tokens)
+        member = self.parse_method_or_field_rest()
 
-    if isinstance(member, tree.MethodDeclaration):
-        member_type.dimensions += member.return_type.dimensions
+        if isinstance(member, tree.MethodDeclaration):
+            member_type.dimensions += member.return_type.dimensions
 
-        member.name = member_name
-        member.return_type = member_type
-    else:
-        member.type = member_type
-        member.declarators[0].name = member_name
+            member.name = member_name
+            member.return_type = member_type
+        else:
+            member.type = member_type
+            member.declarators[0].name = member_name
 
-    return member
+        return member
 
-@parse_debug
-def parse_method_or_field_rest(tokens):
-    if would_accept(tokens, '('):
-        return parse_method_declarator_rest(tokens)
-    else:
-        rest = parse_field_declarators_rest(tokens)
-        accept(tokens, ';')
-        return rest
+    @parse_debug
+    def parse_method_or_field_rest(self):
+        if self.would_accept('('):
+            return self.parse_method_declarator_rest()
+        else:
+            rest = self.parse_field_declarators_rest()
+            self.accept(';')
+            return rest
 
-@parse_debug
-def parse_field_declarators_rest(tokens):
-    array_dimension, initializer = parse_variable_declarator_rest(tokens)
-    declarators = [tree.VariableDeclarator(dimensions=array_dimension,
-                                           initializer=initializer)]
+    @parse_debug
+    def parse_field_declarators_rest(self):
+        array_dimension, initializer = self.parse_variable_declarator_rest()
+        declarators = [tree.VariableDeclarator(dimensions=array_dimension,
+                                               initializer=initializer)]
 
-    while try_accept(tokens, ','):
-        declarator = parse_variable_declarator(tokens)
-        declarators.append(declarator)
+        while self.try_accept(','):
+            declarator = self.parse_variable_declarator()
+            declarators.append(declarator)
 
-    return tree.FieldDeclaration(declarators=declarators)
+        return tree.FieldDeclaration(declarators=declarators)
 
-@parse_debug
-def parse_method_declarator_rest(tokens):
-    formal_parameters = parse_formal_parameters(tokens)
-    additional_dimensions = parse_array_dimension(tokens)
-    throws = None
-    body = None
+    @parse_debug
+    def parse_method_declarator_rest(self):
+        formal_parameters = self.parse_formal_parameters()
+        additional_dimensions = self.parse_array_dimension()
+        throws = None
+        body = None
 
-    if try_accept(tokens, 'throws'):
-        throws = parse_qualified_identifier_list(tokens)
+        if self.try_accept('throws'):
+            throws = self.parse_qualified_identifier_list()
 
-    if would_accept(tokens, '{'):
-        body = parse_block(tokens)
-    else:
-        accept(tokens, ';')
+        if self.would_accept('{'):
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
-    return tree.MethodDeclaration(parameters=formal_parameters,
-                                 throws=throws,
-                                 body=body,
-                                 return_type=tree.Type(dimensions=additional_dimensions))
+        return tree.MethodDeclaration(parameters=formal_parameters,
+                                     throws=throws,
+                                     body=body,
+                                     return_type=tree.Type(dimensions=additional_dimensions))
 
-@parse_debug
-def parse_void_method_declarator_rest(tokens):
-    formal_parameters = parse_formal_parameters(tokens)
-    throws = None
-    body = None
+    @parse_debug
+    def parse_void_method_declarator_rest(self):
+        formal_parameters = self.parse_formal_parameters()
+        throws = None
+        body = None
 
-    if try_accept(tokens, 'throws'):
-        throws = parse_qualified_identifier_list(tokens)
+        if self.try_accept('throws'):
+            throws = self.parse_qualified_identifier_list()
 
-    if would_accept(tokens, '{'):
-        body = parse_block(tokens)
-    else:
-        accept(tokens, ';')
+        if self.would_accept('{'):
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
-    return tree.MethodDeclaration(parameters=formal_parameters,
-                                 throws=throws,
-                                 body=body)
+        return tree.MethodDeclaration(parameters=formal_parameters,
+                                     throws=throws,
+                                     body=body)
 
-@parse_debug
-def parse_constructor_declarator_rest(tokens):
-    formal_parameters = parse_formal_parameters(tokens)
-    throws = None
-    body = None
+    @parse_debug
+    def parse_constructor_declarator_rest(self):
+        formal_parameters = self.parse_formal_parameters()
+        throws = None
+        body = None
 
-    if try_accept(tokens, 'throws'):
-        throws = parse_qualified_identifier_list(tokens)
+        if self.try_accept('throws'):
+            throws = self.parse_qualified_identifier_list()
 
-    body = parse_block(tokens)
+        body = self.parse_block()
 
-    return tree.ConstructorDeclaration(parameters=formal_parameters,
-                                      throws=throws,
-                                      body=body)
+        return tree.ConstructorDeclaration(parameters=formal_parameters,
+                                          throws=throws,
+                                          body=body)
 
-@parse_debug
-def parse_generic_method_or_constructor_declaration(tokens):
-    type_parameters = parse_type_parameters(tokens)
-    method = None
+    @parse_debug
+    def parse_generic_method_or_constructor_declaration(self):
+        type_parameters = self.parse_type_parameters()
+        method = None
 
-    if would_accept(tokens, Identifier, '('):
-        constructor_name = parse_identifier(tokens)
-        method = parse_constructor_declarator_rest(tokens)
-        method.name = constructor_name
+        if self.would_accept(Identifier, '('):
+            constructor_name = self.parse_identifier()
+            method = self.parse_constructor_declarator_rest()
+            method.name = constructor_name
 
-    elif try_accept(tokens, 'void'):
-        method_name = parse_identifier(tokens)
-        method = parse_void_method_declarator_rest(tokens)
-        method.name = method_name
+        elif self.try_accept('void'):
+            method_name = self.parse_identifier()
+            method = self.parse_void_method_declarator_rest()
+            method.name = method_name
 
-    else:
-        method_return_type = parse_type(tokens)
-        method_name = parse_identifier(tokens)
+        else:
+            method_return_type = self.parse_type()
+            method_name = self.parse_identifier()
 
-        method = parse_method_declarator_rest(tokens)
+            method = self.parse_method_declarator_rest()
 
-        method_return_type.dimensions += method.return_type.dimensions
-        method.return_type = method_return_type
-        method.name = method_name
+            method_return_type.dimensions += method.return_type.dimensions
+            method.return_type = method_return_type
+            method.name = method_name
 
-    method.type_parameters = type_parameters
-    return method
+        method.type_parameters = type_parameters
+        return method
 
 # ------------------------------------------------------------------------------
 # -- Interface body --
 
-@parse_debug
-def parse_interface_body(tokens):
-    declarations = list()
+    @parse_debug
+    def parse_interface_body(self):
+        declarations = list()
 
-    accept(tokens, '{')
-    while not would_accept(tokens, '}'):
-        declaration = parse_interface_body_declaration(tokens)
+        self.accept('{')
+        while not self.would_accept('}'):
+            declaration = self.parse_interface_body_declaration()
 
-        if declaration:
-            declarations.append(declaration)
-    accept(tokens, '}')
+            if declaration:
+                declarations.append(declaration)
+        self.accept('}')
 
-    return declarations
+        return declarations
 
-@parse_debug
-def parse_interface_body_declaration(tokens):
-    if try_accept(tokens, ';'):
-        return None
+    @parse_debug
+    def parse_interface_body_declaration(self):
+        if self.try_accept(';'):
+            return None
 
-    modifiers, annotations = parse_modifiers(tokens)
+        modifiers, annotations = self.parse_modifiers()
 
-    declaration = parse_interface_member_declaration(tokens)
-    declaration.modifiers = modifiers
-    declaration.annotations = annotations
+        declaration = self.parse_interface_member_declaration()
+        declaration.modifiers = modifiers
+        declaration.annotations = annotations
 
-    return declaration
+        return declaration
 
-@parse_debug
-def parse_interface_member_declaration(tokens):
-    declaration = None
+    @parse_debug
+    def parse_interface_member_declaration(self):
+        declaration = None
 
-    if would_accept(tokens, 'class'):
-        declaration = parse_normal_class_declaration(tokens)
-    elif would_accept(tokens, 'interface'):
-        declaration = parse_normal_interface_declaration(tokens)
-    elif would_accept(tokens, 'enum'):
-        declaration = parse_enum_declaration(tokens)
-    elif is_annotation_declaration(tokens):
-        declaration = parse_annotation_type_declaration(tokens)
-    elif would_accept(tokens, '<'):
-        declaration = parse_interface_generic_method_declarator(tokens)
-    elif try_accept(tokens, 'void'):
-        method_name = parse_identifier(tokens)
-        declaration = parse_void_interface_method_declarator_rest(tokens)
-        declaration.name = method_name
-    else:
-        declaration = parse_interface_method_or_field_declaration(tokens)
+        if self.would_accept('class'):
+            declaration = self.parse_normal_class_declaration()
+        elif self.would_accept('interface'):
+            declaration = self.parse_normal_interface_declaration()
+        elif self.would_accept('enum'):
+            declaration = self.parse_enum_declaration()
+        elif self.is_annotation_declaration():
+            declaration = self.parse_annotation_type_declaration()
+        elif self.would_accept('<'):
+            declaration = self.parse_interface_generic_method_declarator()
+        elif self.try_accept('void'):
+            method_name = self.parse_identifier()
+            declaration = self.parse_void_interface_method_declarator_rest()
+            declaration.name = method_name
+        else:
+            declaration = self.parse_interface_method_or_field_declaration()
 
-    return declaration
+        return declaration
 
-@parse_debug
-def parse_interface_method_or_field_declaration(tokens):
-    java_type = parse_type(tokens)
-    name = parse_identifier(tokens)
-    member = parse_interface_method_or_field_rest(tokens)
-    member.name = name
+    @parse_debug
+    def parse_interface_method_or_field_declaration(self):
+        java_type = self.parse_type()
+        name = self.parse_identifier()
+        member = self.parse_interface_method_or_field_rest()
+        member.name = name
 
-    if isinstance(member, tree.MethodDeclaration):
-        java_type.dimensions += member.return_type.dimensions
-        member.return_type = java_type
-    else:
-        member.type = java_type
+        if isinstance(member, tree.MethodDeclaration):
+            java_type.dimensions += member.return_type.dimensions
+            member.return_type = java_type
+        else:
+            member.type = java_type
 
-    return member
+        return member
 
-@parse_debug
-def parse_interface_method_or_field_rest(tokens):
-    rest = None
+    @parse_debug
+    def parse_interface_method_or_field_rest(self):
+        rest = None
 
-    if would_accept(tokens, '('):
-        rest = parse_interface_method_declarator_rest(tokens)
-    else:
-        rest = parse_constant_declarators_rest(tokens)
-        accept(tokens, ';')
+        if self.would_accept('('):
+            rest = self.parse_interface_method_declarator_rest()
+        else:
+            rest = self.parse_constant_declarators_rest()
+            self.accept(';')
 
-    return rest
+        return rest
 
-@parse_debug
-def parse_constant_declarators_rest(tokens):
-    array_dimension, initializer = parse_constant_declarator_rest(tokens)
-    declarators = [tree.VariableDeclarator(dimensions=array_dimension,
-                                           initializer=initializer)]
+    @parse_debug
+    def parse_constant_declarators_rest(self):
+        array_dimension, initializer = self.parse_constant_declarator_rest()
+        declarators = [tree.VariableDeclarator(dimensions=array_dimension,
+                                               initializer=initializer)]
 
-    while try_accept(tokens, ','):
-        declarator = parse_constant_declarator(tokens)
-        declarators.append(declarator)
+        while self.try_accept(','):
+            declarator = self.parse_constant_declarator()
+            declarators.append(declarator)
 
-    return tree.ConstantDeclaration(declarators=declarators)
+        return tree.ConstantDeclaration(declarators=declarators)
 
-@parse_debug
-def parse_constant_declarator_rest(tokens):
-    array_dimension = parse_array_dimension(tokens)
-    accept(tokens, '=')
-    initializer = parse_variable_initializer(tokens)
+    @parse_debug
+    def parse_constant_declarator_rest(self):
+        array_dimension = self.parse_array_dimension()
+        self.accept('=')
+        initializer = self.parse_variable_initializer()
 
-    return (array_dimension, initializer)
+        return (array_dimension, initializer)
 
-@parse_debug
-def parse_constant_declarator(tokens):
-    name = parse_identifier(tokens)
-    additional_dimension, initializer = parse_constant_declarator_rest(tokens)
+    @parse_debug
+    def parse_constant_declarator(self):
+        name = self.parse_identifier()
+        additional_dimension, initializer = self.parse_constant_declarator_rest()
 
-    return tree.VariableDeclarator(name=name,
-                                   dimensions=additional_dimension,
-                                   initializer=initializer)
+        return tree.VariableDeclarator(name=name,
+                                       dimensions=additional_dimension,
+                                       initializer=initializer)
 
-@parse_debug
-def parse_interface_method_declarator_rest(tokens):
-    parameters = parse_formal_parameters(tokens)
-    array_dimension = parse_array_dimension(tokens)
-    throws = None
+    @parse_debug
+    def parse_interface_method_declarator_rest(self):
+        parameters = self.parse_formal_parameters()
+        array_dimension = self.parse_array_dimension()
+        throws = None
 
-    if try_accept(tokens, 'throws'):
-        throws = parse_qualified_identifier_list(tokens)
+        if self.try_accept('throws'):
+            throws = self.parse_qualified_identifier_list()
 
-    accept(tokens, ';')
+        self.accept(';')
 
-    return tree.MethodDeclaration(parameters=parameters,
-                                  throws=throws,
-                                  return_type=tree.Type(dimensions=array_dimension))
+        return tree.MethodDeclaration(parameters=parameters,
+                                      throws=throws,
+                                      return_type=tree.Type(dimensions=array_dimension))
 
-@parse_debug
-def parse_void_interface_method_declarator_rest(tokens):
-    parameters = parse_formal_parameters(tokens)
-    throws = None
+    @parse_debug
+    def parse_void_interface_method_declarator_rest(self):
+        parameters = self.parse_formal_parameters()
+        throws = None
 
-    if try_accept(tokens, 'throws'):
-        throws = parse_qualified_identifier_list(tokens)
+        if self.try_accept('throws'):
+            throws = self.parse_qualified_identifier_list()
 
-    accept(tokens, ';')
+        self.accept(';')
 
-    return tree.MethodDeclaration(parameters=parameters,
-                                  throws=throws)
+        return tree.MethodDeclaration(parameters=parameters,
+                                      throws=throws)
 
-@parse_debug
-def parse_interface_generic_method_declarator(tokens):
-    type_parameters = parse_type_parameters(tokens)
-    return_type = None
-    method_name = None
-    rest = None
+    @parse_debug
+    def parse_interface_generic_method_declarator(self):
+        type_parameters = self.parse_type_parameters()
+        return_type = None
+        method_name = None
+        rest = None
 
-    if not try_accept(tokens, 'void'):
-        return_type = parse_type(tokens)
+        if not self.try_accept('void'):
+            return_type = self.parse_type()
 
-    method_name = parse_identifier(tokens)
-    method = parse_interface_method_declarator_rest(tokens)
-    method.name = method_name
-    method.return_type = return_type
-    method.type_parameters = type_parameters
+        method_name = self.parse_identifier()
+        method = self.parse_interface_method_declarator_rest()
+        method.name = method_name
+        method.return_type = return_type
+        method.type_parameters = type_parameters
 
-    return method
+        return method
 
 # ------------------------------------------------------------------------------
 # -- Parameters and variables --
 
-@parse_debug
-def parse_formal_parameters(tokens):
-    formal_parameters = list()
+    @parse_debug
+    def parse_formal_parameters(self):
+        formal_parameters = list()
 
-    accept(tokens, '(')
+        self.accept('(')
 
-    if try_accept(tokens, ')'):
+        if self.try_accept(')'):
+            return formal_parameters
+
+        while True:
+            modifiers, annotations = self.parse_variable_modifiers()
+            parameter_type = self.parse_type()
+            varargs = False
+
+            if self.try_accept('...'):
+                varargs = True
+
+            parameter_name = self.parse_identifier()
+            parameter_type.dimensions += self.parse_array_dimension()
+
+            parameter = tree.FormalParameter(modifiers=modifiers,
+                                            annotations=annotations,
+                                            type=parameter_type,
+                                            name=parameter_name,
+                                            varargs=varargs)
+
+            formal_parameters.append(parameter)
+
+            if varargs:
+                # varargs parameter must be the last
+                break
+
+            if not self.try_accept(','):
+                break
+
+        self.accept(')')
+
         return formal_parameters
 
-    while True:
-        modifiers, annotations = parse_variable_modifiers(tokens)
-        parameter_type = parse_type(tokens)
-        varargs = False
+    @parse_debug
+    def parse_variable_modifiers(self):
+        modifiers = set()
+        annotations = list()
 
-        if try_accept(tokens, '...'):
-            varargs = True
+        while True:
+            if self.try_accept('final'):
+                modifiers.add('final')
+            elif self.is_annotation():
+                annotation = self.parse_annotation()
+                annotations.append(annotation)
+            else:
+                break
 
-        parameter_name = parse_identifier(tokens)
-        parameter_type.dimensions += parse_array_dimension(tokens)
+        return modifiers, annotations
 
-        parameter = tree.FormalParameter(modifiers=modifiers,
-                                        annotations=annotations,
-                                        type=parameter_type,
-                                        name=parameter_name,
-                                        varargs=varargs)
+    @parse_debug
+    def parse_variable_declators(self):
+        declarators = list()
 
-        formal_parameters.append(parameter)
+        while True:
+            declarator = self.parse_variable_declator()
+            declarators.append(declarator)
 
-        if varargs:
-            # varargs parameter must be the last
-            break
+            if not self.try_accept(','):
+                break
 
-        if not try_accept(tokens, ','):
-            break
+        return declarators
 
-    accept(tokens, ')')
+    @parse_debug
+    def parse_variable_declarators(self):
+        declarators = list()
 
-    return formal_parameters
+        while True:
+            declarator = self.parse_variable_declarator()
+            declarators.append(declarator)
 
-@parse_debug
-def parse_variable_modifiers(tokens):
-    modifiers = set()
-    annotations = list()
+            if not self.try_accept(','):
+                break
 
-    while True:
-        if try_accept(tokens, 'final'):
-            modifiers.add('final')
-        elif is_annotation(tokens):
-            annotation = parse_annotation(tokens)
-            annotations.append(annotation)
+        return declarators
+
+    @parse_debug
+    def parse_variable_declarator(self):
+        identifier = self.parse_identifier()
+        array_dimension, initializer = self.parse_variable_declarator_rest()
+
+        return tree.VariableDeclarator(name=identifier,
+                                      dimensions=array_dimension,
+                                      initializer=initializer)
+
+    @parse_debug
+    def parse_variable_declarator_rest(self):
+        array_dimension = self.parse_array_dimension()
+        initializer = None
+
+        if self.try_accept('='):
+            initializer = self.parse_variable_initializer()
+
+        return (array_dimension, initializer)
+
+    @parse_debug
+    def parse_variable_initializer(self):
+        if self.would_accept('{'):
+            return self.parse_array_initializer()
         else:
-            break
+            return self.parse_expression()
 
-    return modifiers, annotations
+    @parse_debug
+    def parse_array_initializer(self):
+        array_initializer = tree.ArrayInitializer(initializers=list())
 
-@parse_debug
-def parse_variable_declators(tokens):
-    declarators = list()
+        self.accept('{')
 
-    while True:
-        declarator = parse_variable_declator(tokens)
-        declarators.append(declarator)
-
-        if not try_accept(tokens, ','):
-            break
-
-    return declarators
-
-@parse_debug
-def parse_variable_declarators(tokens):
-    declarators = list()
-
-    while True:
-        declarator = parse_variable_declarator(tokens)
-        declarators.append(declarator)
-
-        if not try_accept(tokens, ','):
-            break
-
-    return declarators
-
-@parse_debug
-def parse_variable_declarator(tokens):
-    identifier = parse_identifier(tokens)
-    array_dimension, initializer = parse_variable_declarator_rest(tokens)
-
-    return tree.VariableDeclarator(name=identifier,
-                                  dimensions=array_dimension,
-                                  initializer=initializer)
-
-@parse_debug
-def parse_variable_declarator_rest(tokens):
-    array_dimension = parse_array_dimension(tokens)
-    initializer = None
-
-    if try_accept(tokens, '='):
-        initializer = parse_variable_initializer(tokens)
-
-    return (array_dimension, initializer)
-
-@parse_debug
-def parse_variable_initializer(tokens):
-    if would_accept(tokens, '{'):
-        return parse_array_initializer(tokens)
-    else:
-        return parse_expression(tokens)
-
-@parse_debug
-def parse_array_initializer(tokens):
-    array_initializer = tree.ArrayInitializer(initializers=list())
-
-    accept(tokens, '{')
-
-    if try_accept(tokens, ','):
-        accept(tokens, '}')
-        return array_initializer
-
-    if try_accept(tokens, '}'):
-        return array_initializer
-
-    while True:
-        initializer = parse_variable_initializer(tokens)
-        array_initializer.initializers.append(initializer)
-
-        if not would_accept(tokens, '}'):
-            accept(tokens, ',')
-
-        if try_accept(tokens, '}'):
+        if self.try_accept(','):
+            self.accept('}')
             return array_initializer
+
+        if self.try_accept('}'):
+            return array_initializer
+
+        while True:
+            initializer = self.parse_variable_initializer()
+            array_initializer.initializers.append(initializer)
+
+            if not self.would_accept('}'):
+                self.accept(',')
+
+            if self.try_accept('}'):
+                return array_initializer
 
 # ------------------------------------------------------------------------------
 # -- Blocks and statements --
 
-@parse_debug
-def parse_block(tokens):
-    statements = list()
+    @parse_debug
+    def parse_block(self):
+        statements = list()
 
-    accept(tokens, '{')
+        self.accept('{')
 
-    while not would_accept(tokens, '}'):
-        statement = parse_block_statement(tokens)
-        statements.append(statement)
-    accept(tokens, '}')
+        while not self.would_accept('}'):
+            statement = self.parse_block_statement()
+            statements.append(statement)
+        self.accept('}')
 
-    return statements
+        return statements
 
-@parse_debug
-def parse_block_statement(tokens):
-    if would_accept(tokens, Identifier, ':'):
-        # Labeled statement
-        return parse_statement(tokens)
+    @parse_debug
+    def parse_block_statement(self):
+        if self.would_accept(Identifier, ':'):
+            # Labeled statement
+            return self.parse_statement()
 
-    if would_accept(tokens, 'synchronized'):
-        return parse_statement(tokens)
+        if self.would_accept('synchronized'):
+            return self.parse_statement()
 
-    token = None
-    found_annotations = False
-    i = 0
+        token = None
+        found_annotations = False
+        i = 0
 
-    # Look past annoatations and modifiers. If we find a modifier that is not
-    # 'final' then the statement must be a class or interface declaration
-    while True:
-        token = tokens.look(i)
+        # Look past annoatations and modifiers. If we find a modifier that is not
+        # 'final' then the statement must be a class or interface declaration
+        while True:
+            token = self.tokens.look(i)
 
-        if isinstance(token, Modifier):
-            if not token.value == 'final':
-                return parse_class_or_interface_declaration(tokens)
+            if isinstance(token, Modifier):
+                if not token.value == 'final':
+                    return self.parse_class_or_interface_declaration()
 
-        elif is_annotation(tokens, i):
-            found_annotations = True
+            elif self.is_annotation(i):
+                found_annotations = True
 
-            i += 2
-            while tokens.look(i).value == '.':
                 i += 2
+                while self.tokens.look(i).value == '.':
+                    i += 2
 
-            if tokens.look(i).value == '(':
-                parens = 1
-                i += 1
-
-                while parens > 0:
-                    token = tokens.look(i)
-                    if token.value == '(':
-                        parens += 1
-                    elif token.value == ')':
-                        parens -= 1
+                if self.tokens.look(i).value == '(':
+                    parens = 1
                     i += 1
-                continue
+
+                    while parens > 0:
+                        token = self.tokens.look(i)
+                        if token.value == '(':
+                            parens += 1
+                        elif token.value == ')':
+                            parens -= 1
+                        i += 1
+                    continue
+
+            else:
+                break
+
+            i += 1
+
+        if token.value in ('class', 'enum', 'interface', '@'):
+            return self.parse_class_or_interface_declaration()
+
+        if found_annotations or isinstance(token, BasicType):
+            return self.parse_local_variable_declaration_statement()
+
+        # At this point, if the block statement is a variable definition the next
+        # token MUST be an identifier, so if it isn't we can conclude the block
+        # statement is a normal statement
+        if not isinstance(token, Identifier):
+            return self.parse_statement()
+
+        # We can't easily determine the statement type. Try parsing as a variable
+        # declaration first and fall back to a statement
+        try:
+            with self.tokens:
+                return self.parse_local_variable_declaration_statement()
+        except JavaSyntaxError:
+            return self.parse_statement()
+
+    @parse_debug
+    def parse_local_variable_declaration_statement(self):
+        modifiers, annotations = self.parse_variable_modifiers()
+        java_type = self.parse_type()
+        declarators = self.parse_variable_declarators()
+        self.accept(';')
+
+        var = tree.LocalVariableDeclaration(modifiers=modifiers,
+                                           annotations=annotations,
+                                           type=java_type,
+                                           declarators=declarators)
+        return var
+
+    @parse_debug
+    def parse_statement(self):
+        token = self.tokens.look()
+
+        if self.would_accept('{'):
+            block = self.parse_block()
+            return tree.BlockStatement(statements=block)
+
+        elif self.try_accept(';'):
+            return tree.Statement()
+
+        elif self.would_accept(Identifier, ':'):
+            identifer = self.parse_identifier()
+            self.accept(':')
+
+            statement = self.parse_statement()
+            statement.label = identifer
+
+            return statement
+
+        elif self.try_accept('if'):
+            condition = self.parse_par_expression()
+            then = self.parse_statement()
+            else_statement = None
+
+            if self.try_accept('else'):
+                else_statement = self.parse_statement()
+
+            return tree.IfStatement(condition=condition,
+                                   then_statement=then,
+                                   else_statement=else_statement)
+
+        elif self.try_accept('assert'):
+            condition = self.parse_expression()
+            value = None
+
+            if self.try_accept(':'):
+                value = self.parse_expression()
+
+            self.accept(';')
+
+            return tree.AssertStatement(condition=condition,
+                                       value=value)
+
+        elif self.try_accept('switch'):
+            switch_expression = self.parse_par_expression()
+            self.accept('{')
+            switch_block = self.parse_switch_block_statement_groups()
+            self.accept('}')
+
+            return tree.SwitchStatement(expression=switch_expression,
+                                       cases=switch_block)
+
+        elif self.try_accept('while'):
+            condition = self.parse_par_expression()
+            action = self.parse_statement()
+
+            return tree.WhileStatement(condition=condition,
+                                      body=action)
+
+        elif self.try_accept('do'):
+            action = self.parse_statement()
+            self.accept('while')
+            condition = self.parse_par_expression()
+            self.accept(';')
+
+            return tree.DoStatement(condition=condition,
+                                   body=action)
+
+        elif self.try_accept('for'):
+            self.accept('(')
+            for_control = self.parse_for_control()
+            self.accept(')')
+            for_statement = self.parse_statement()
+
+            return tree.ForStatement(control=for_control,
+                                    body=for_statement)
+
+        elif self.try_accept('break'):
+            label = None
+
+            if self.would_accept(Identifier):
+                label = self.parse_identifier()
+
+            self.accept(';')
+
+            return tree.BreakStatement(goto=label)
+
+        elif self.try_accept('continue'):
+            label = None
+
+            if self.would_accept(Identifier):
+                label = self.parse_identifier()
+
+            self.accept(';')
+
+            return tree.ContinueStatement(goto=label)
+
+        elif self.try_accept('return'):
+            value = None
+
+            if not self.would_accept(';'):
+                value = self.parse_expression()
+
+            self.accept(';')
+
+            return tree.ReturnStatement(expression=value)
+
+        elif self.try_accept('throw'):
+            value = self.parse_expression()
+            self.accept(';')
+
+            return tree.ThrowStatement(expression=value)
+
+        elif self.try_accept('synchronized'):
+            lock = self.parse_par_expression()
+            block = self.parse_block()
+
+            return tree.SynchronizedStatement(lock=lock,
+                                             block=block)
+
+        elif self.try_accept('try'):
+            resource_specification = None
+            block = None
+            catches = None
+            finally_block = None
+
+            if self.would_accept('{'):
+                block = self.parse_block()
+
+                if self.would_accept('catch'):
+                    catches = self.parse_catches()
+
+                if self.try_accept('finally'):
+                    finally_block = self.parse_block()
+
+                if catches == None and finally_block == None:
+                    self.illegal("Expected catch/finally block")
+
+            else:
+                resource_specification = self.parse_resource_specification()
+                block = self.parse_block()
+
+                if self.would_accept('catch'):
+                    catches = self.parse_catches()
+
+                if self.try_accept('finally'):
+                    finally_block = self.parse_block()
+
+            return tree.TryStatement(resources=resource_specification,
+                                    block=block,
+                                    catches=catches,
+                                    finally_block=finally_block)
 
         else:
-            break
+            expression = self.parse_expression()
+            self.accept(';')
 
-        i += 1
-
-    if token.value in ('class', 'enum', 'interface', '@'):
-        return parse_class_or_interface_declaration(tokens)
-
-    if found_annotations or isinstance(token, BasicType):
-        return parse_local_variable_declaration_statement(tokens)
-
-    # At this point, if the block statement is a variable definition the next
-    # token MUST be an identifier, so if it isn't we can conclude the block
-    # statement is a normal statement
-    if not isinstance(token, Identifier):
-        return parse_statement(tokens)
-
-    # We can't easily determine the statement type. Try parsing as a variable
-    # declaration first and fall back to a statement
-    try:
-        with tokens:
-            return parse_local_variable_declaration_statement(tokens)
-    except JavaSyntaxError:
-        return parse_statement(tokens)
-
-@parse_debug
-def parse_local_variable_declaration_statement(tokens):
-    modifiers, annotations = parse_variable_modifiers(tokens)
-    java_type = parse_type(tokens)
-    declarators = parse_variable_declarators(tokens)
-    accept(tokens, ';')
-
-    var = tree.LocalVariableDeclaration(modifiers=modifiers,
-                                       annotations=annotations,
-                                       type=java_type,
-                                       declarators=declarators)
-    return var
-
-@parse_debug
-def parse_statement(tokens):
-    token = tokens.look()
-
-    if would_accept(tokens, '{'):
-        block = parse_block(tokens)
-        return tree.BlockStatement(statements=block)
-
-    elif try_accept(tokens, ';'):
-        return tree.Statement()
-
-    elif would_accept(tokens, Identifier, ':'):
-        identifer = parse_identifier(tokens)
-        accept(tokens, ':')
-
-        statement = parse_statement(tokens)
-        statement.label = identifer
-
-        return statement
-
-    elif try_accept(tokens, 'if'):
-        condition = parse_par_expression(tokens)
-        then = parse_statement(tokens)
-        else_statement = None
-
-        if try_accept(tokens, 'else'):
-            else_statement = parse_statement(tokens)
-
-        return tree.IfStatement(condition=condition,
-                               then_statement=then,
-                               else_statement=else_statement)
-
-    elif try_accept(tokens, 'assert'):
-        condition = parse_expression(tokens)
-        value = None
-
-        if try_accept(tokens, ':'):
-            value = parse_expression(tokens)
-
-        accept(tokens, ';')
-
-        return tree.AssertStatement(condition=condition,
-                                   value=value)
-
-    elif try_accept(tokens, 'switch'):
-        switch_expression = parse_par_expression(tokens)
-        accept(tokens, '{')
-        switch_block = parse_switch_block_statement_groups(tokens)
-        accept(tokens, '}')
-
-        return tree.SwitchStatement(expression=switch_expression,
-                                   cases=switch_block)
-
-    elif try_accept(tokens, 'while'):
-        condition = parse_par_expression(tokens)
-        action = parse_statement(tokens)
-
-        return tree.WhileStatement(condition=condition,
-                                  body=action)
-
-    elif try_accept(tokens, 'do'):
-        action = parse_statement(tokens)
-        accept(tokens, 'while')
-        condition = parse_par_expression(tokens)
-        accept(tokens, ';')
-
-        return tree.DoStatement(condition=condition,
-                               body=action)
-
-    elif try_accept(tokens, 'for'):
-        accept(tokens, '(')
-        for_control = parse_for_control(tokens)
-        accept(tokens, ')')
-        for_statement = parse_statement(tokens)
-
-        return tree.ForStatement(control=for_control,
-                                body=for_statement)
-
-    elif try_accept(tokens, 'break'):
-        label = None
-
-        if would_accept(tokens, Identifier):
-            label = parse_identifier(tokens)
-
-        accept(tokens, ';')
-
-        return tree.BreakStatement(goto=label)
-
-    elif try_accept(tokens, 'continue'):
-        label = None
-
-        if would_accept(tokens, Identifier):
-            label = parse_identifier(tokens)
-
-        accept(tokens, ';')
-
-        return tree.ContinueStatement(goto=label)
-
-    elif try_accept(tokens, 'return'):
-        value = None
-
-        if not would_accept(tokens, ';'):
-            value = parse_expression(tokens)
-
-        accept(tokens, ';')
-
-        return tree.ReturnStatement(expression=value)
-
-    elif try_accept(tokens, 'throw'):
-        value = parse_expression(tokens)
-        accept(tokens, ';')
-
-        return tree.ThrowStatement(expression=value)
-
-    elif try_accept(tokens, 'synchronized'):
-        lock = parse_par_expression(tokens)
-        block = parse_block(tokens)
-
-        return tree.SynchronizedStatement(lock=lock,
-                                         block=block)
-
-    elif try_accept(tokens, 'try'):
-        resource_specification = None
-        block = None
-        catches = None
-        finally_block = None
-
-        if would_accept(tokens, '{'):
-            block = parse_block(tokens)
-
-            if would_accept(tokens, 'catch'):
-                catches = parse_catches(tokens)
-
-            if try_accept(tokens, 'finally'):
-                finally_block = parse_block(tokens)
-
-            if catches == None and finally_block == None:
-                raise JavaSyntaxError("Expected catch/finally block")
-
-        else:
-            resource_specification = parse_resource_specification(tokens)
-            block = parse_block(tokens)
-
-            if would_accept(tokens, 'catch'):
-                catches = parse_catches(tokens)
-
-            if try_accept(tokens, 'finally'):
-                finally_block = parse_block(tokens)
-
-        return tree.TryStatement(resources=resource_specification,
-                                block=block,
-                                catches=catches,
-                                finally_block=finally_block)
-
-    else:
-        expression = parse_expression(tokens)
-        accept(tokens, ';')
-
-        return tree.StatementExpression(expression=expression)
+            return tree.StatementExpression(expression=expression)
 
 # ------------------------------------------------------------------------------
 # -- Try / catch --
 
-@parse_debug
-def parse_catches(tokens):
-    catches = list()
+    @parse_debug
+    def parse_catches(self):
+        catches = list()
 
-    while True:
-        catch = parse_catch_clause(tokens)
-        catches.append(catch)
+        while True:
+            catch = self.parse_catch_clause()
+            catches.append(catch)
 
-        if not would_accept(tokens, 'catch'):
-            break
+            if not self.would_accept('catch'):
+                break
 
-    return catches
+        return catches
 
-@parse_debug
-def parse_catch_clause(tokens):
-    accept(tokens, 'catch', '(')
+    @parse_debug
+    def parse_catch_clause(self):
+        self.accept('catch', '(')
 
-    modifiers, annotations = parse_variable_modifiers(tokens)
-    catch_types = list()
+        modifiers, annotations = self.parse_variable_modifiers()
+        catch_types = list()
 
-    catch_parameter = tree.CatchClauseParameter(types=list())
+        catch_parameter = tree.CatchClauseParameter(types=list())
 
-    while True:
-        catch_type = parse_qualified_identifier(tokens)
-        catch_parameter.types.append(catch_type)
+        while True:
+            catch_type = self.parse_qualified_identifier()
+            catch_parameter.types.append(catch_type)
 
-        if not try_accept(tokens, '|'):
-            break
-    catch_parameter.name = parse_identifier(tokens)
+            if not self.try_accept('|'):
+                break
+        catch_parameter.name = self.parse_identifier()
 
-    accept(tokens, ')')
-    block = parse_block(tokens)
+        self.accept(')')
+        block = self.parse_block()
 
-    return tree.CatchClause(parameter=catch_parameter,
-                           block=block)
+        return tree.CatchClause(parameter=catch_parameter,
+                               block=block)
 
-@parse_debug
-def parse_resource_specification(tokens):
-    resources = list()
+    @parse_debug
+    def parse_resource_specification(self):
+        resources = list()
 
-    accept(tokens, '(')
+        self.accept('(')
 
-    while True:
-        resource = parse_resource(tokens)
-        resources.append(resource)
+        while True:
+            resource = self.parse_resource()
+            resources.append(resource)
 
-        if not would_accept(tokens, ')'):
-            accept(tokens, ';')
+            if not self.would_accept(')'):
+                self.accept(';')
 
-        if try_accept(tokens, ')'):
-            break
+            if self.try_accept(')'):
+                break
 
-    return resources
+        return resources
 
-@parse_debug
-def parse_resource(tokens):
-    modifiers, annotations = parse_variable_modifiers(tokens)
-    reference_type = parse_reference_type(tokens)
-    reference_type.dimensions = parse_array_dimension(tokens)
-    name = parse_identifier(tokens)
-    reference_type.dimensions += parse_array_dimension(tokens)
-    accept(tokens, '=')
-    value = parse_expression(tokens)
+    @parse_debug
+    def parse_resource(self):
+        modifiers, annotations = self.parse_variable_modifiers()
+        reference_type = self.parse_reference_type()
+        reference_type.dimensions = self.parse_array_dimension()
+        name = self.parse_identifier()
+        reference_type.dimensions += self.parse_array_dimension()
+        self.accept('=')
+        value = self.parse_expression()
 
-    return tree.TryResource(modifiers=modifiers,
-                           annotations=annotations,
-                           type=reference_type,
-                           name=name,
-                           value=value)
+        return tree.TryResource(modifiers=modifiers,
+                               annotations=annotations,
+                               type=reference_type,
+                               name=name,
+                               value=value)
 
 # ------------------------------------------------------------------------------
 # -- Switch and for statements ---
 
-@parse_debug
-def parse_switch_block_statement_groups(tokens):
-    statement_groups = list()
+    @parse_debug
+    def parse_switch_block_statement_groups(self):
+        statement_groups = list()
 
-    while tokens.look().value in ('case', 'default'):
-        statement_group = parse_switch_block_statement_group(tokens)
-        statement_groups.append(statement_group)
+        while self.tokens.look().value in ('case', 'default'):
+            statement_group = self.parse_switch_block_statement_group()
+            statement_groups.append(statement_group)
 
-    return statement_groups
+        return statement_groups
 
-@parse_debug
-def parse_switch_block_statement_group(tokens):
-    labels = list()
-    statements = list()
+    @parse_debug
+    def parse_switch_block_statement_group(self):
+        labels = list()
+        statements = list()
 
-    while True:
-        case_type = tokens.next().value
-        case_value = None
+        while True:
+            case_type = self.tokens.next().value
+            case_value = None
 
-        if case_type == 'case':
-            if would_accept(tokens, Identifier, ':'):
-                case_value = parse_identifier(tokens)
-            else:
-                case_value = parse_expression(tokens)
+            if case_type == 'case':
+                if self.would_accept(Identifier, ':'):
+                    case_value = self.parse_identifier()
+                else:
+                    case_value = self.parse_expression()
 
-            labels.append(case_value)
-        elif not case_type == 'default':
-            raise JavaSyntaxError("Expected switch case")
+                labels.append(case_value)
+            elif not case_type == 'default':
+                self.illegal("Expected switch case")
 
-        accept(tokens, ':')
+            self.accept(':')
 
-        if tokens.look().value not in ('case', 'default'):
-            break
+            if self.tokens.look().value not in ('case', 'default'):
+                break
 
-    while tokens.look().value not in ('case', 'default', '}'):
-        statement = parse_block_statement(tokens)
-        statements.append(statement)
+        while self.tokens.look().value not in ('case', 'default', '}'):
+            statement = self.parse_block_statement()
+            statements.append(statement)
 
-    return tree.SwitchStatementCase(case=labels,
-                                   statements=statements)
+        return tree.SwitchStatementCase(case=labels,
+                                       statements=statements)
 
-@parse_debug
-def parse_for_control(tokens):
-    # Try for_var_control and fall back to normal three part for control
+    @parse_debug
+    def parse_for_control(self):
+        # Try for_var_control and fall back to normal three part for control
 
-    try:
-        with tokens:
-            return parse_for_var_control(tokens)
-    except JavaSyntaxError:
-        pass
+        try:
+            with self.tokens:
+                return self.parse_for_var_control()
+        except JavaSyntaxError:
+            pass
 
-    init = None
-    if not would_accept(tokens, ';'):
-        init = parse_for_init_or_update(tokens)
+        init = None
+        if not self.would_accept(';'):
+            init = self.parse_for_init_or_update()
 
-    accept(tokens, ';')
+        self.accept(';')
 
-    condition = None
-    if not would_accept(tokens, ';'):
-        condition = parse_expression(tokens)
+        condition = None
+        if not self.would_accept(';'):
+            condition = self.parse_expression()
 
-    accept(tokens, ';')
+        self.accept(';')
 
-    update = None
-    if not would_accept(tokens, ')'):
-        update = parse_for_init_or_update(tokens)
+        update = None
+        if not self.would_accept(')'):
+            update = self.parse_for_init_or_update()
 
-    return tree.ForControl(init=init,
-                          condition=condition,
-                          update=update)
-
-@parse_debug
-def parse_for_var_control(tokens):
-    modifiers, annotations = parse_modifiers(tokens)
-    var_type = parse_type(tokens)
-    var_name = parse_identifier(tokens)
-    var_type.dimensions += parse_array_dimension(tokens)
-
-    var = tree.VariableDeclaration(modifiers=modifiers,
-                                  annotations=annotations,
-                                  type=var_type)
-
-    rest = parse_for_var_control_rest(tokens)
-
-    if isinstance(rest, tree.Expression):
-        var.declarators = [tree.VariableDeclarator(name=var_name)]
-        return tree.EnhancedForControl(var=var,
-                                      iterable=rest)
-    else:
-        declarators, condition, update = rest
-        declarators[0].name = var_name
-        var.declarators = declarators
-        return tree.ForControl(init=var,
+        return tree.ForControl(init=init,
                               condition=condition,
                               update=update)
 
-@parse_debug
-def parse_for_var_control_rest(tokens):
-    if try_accept(tokens, ':'):
-        expression = parse_expression(tokens)
-        return expression
+    @parse_debug
+    def parse_for_var_control(self):
+        modifiers, annotations = self.parse_modifiers()
+        var_type = self.parse_type()
+        var_name = self.parse_identifier()
+        var_type.dimensions += self.parse_array_dimension()
 
-    declarators = None
-    if not would_accept(tokens, ';'):
-        declarators = parse_for_variable_declarator_rest(tokens)
-    accept(tokens, ';')
+        var = tree.VariableDeclaration(modifiers=modifiers,
+                                      annotations=annotations,
+                                      type=var_type)
 
-    condition = None
-    if not would_accept(tokens, ';'):
-        condition = parse_expression(tokens)
-    accept(tokens, ';')
+        rest = self.parse_for_var_control_rest()
 
-    update = None
-    if not would_accept(tokens, ')'):
-        update = parse_for_init_or_update(tokens)
+        if isinstance(rest, tree.Expression):
+            var.declarators = [tree.VariableDeclarator(name=var_name)]
+            return tree.EnhancedForControl(var=var,
+                                           iterable=rest)
+        else:
+            declarators, condition, update = rest
+            declarators[0].name = var_name
+            var.declarators = declarators
+            return tree.ForControl(init=var,
+                                   condition=condition,
+                                   update=update)
 
-    return (declarators, condition, update)
+    @parse_debug
+    def parse_for_var_control_rest(self):
+        if self.try_accept(':'):
+            expression = self.parse_expression()
+            return expression
 
-@parse_debug
-def parse_for_variable_declarator_rest(tokens):
-    initializer = None
+        declarators = None
+        if not self.would_accept(';'):
+            declarators = self.parse_for_variable_declarator_rest()
+        self.accept(';')
 
-    if try_accept(tokens, '='):
-        initializer = parse_variable_initializer(tokens)
+        condition = None
+        if not self.would_accept(';'):
+            condition = self.parse_expression()
+        self.accept(';')
 
-    declarators = [tree.VariableDeclarator(initializer=initializer)]
+        update = None
+        if not self.would_accept(')'):
+            update = self.parse_for_init_or_update()
 
-    while try_accept(tokens, ','):
-        declarator = parse_variable_declarator(tokens)
-        declarators.append(declarator)
+        return (declarators, condition, update)
 
-    return declarators
+    @parse_debug
+    def parse_for_variable_declarator_rest(self):
+        initializer = None
 
-@parse_debug
-def parse_for_init_or_update(tokens):
-    expressions = list()
+        if self.try_accept('='):
+            initializer = self.parse_variable_initializer()
 
-    while True:
-        expression = parse_expression(tokens)
-        expressions.append(expression)
+        declarators = [tree.VariableDeclarator(initializer=initializer)]
 
-        if not try_accept(tokens, ','):
-            break
+        while self.try_accept(','):
+            declarator = self.parse_variable_declarator()
+            declarators.append(declarator)
 
-    return expressions
+        return declarators
+
+    @parse_debug
+    def parse_for_init_or_update(self):
+        expressions = list()
+
+        while True:
+            expression = self.parse_expression()
+            expressions.append(expression)
+
+            if not self.try_accept(','):
+                break
+
+        return expressions
 
 # ------------------------------------------------------------------------------
 # -- Expressions --
 
-@parse_debug
-def parse_expression(tokens):
-    expressionl = parse_expressionl(tokens)
-    assignment_type = None
-    assignment_expression = None
+    @parse_debug
+    def parse_expression(self):
+        expressionl = self.parse_expressionl()
+        assignment_type = None
+        assignment_expression = None
 
-    if tokens.look().value in Operator.ASSIGNMENT:
-        assignment_type = tokens.next().value
-        assignment_expression = parse_expression(tokens)
-        return tree.Assignment(expressionl=expressionl,
-                              type=assignment_type,
-                              value=assignment_expression)
-    else:
-        return expressionl
-
-@parse_debug
-def parse_expressionl(tokens):
-    expression_2 = parse_expression_2(tokens)
-    is_ternary = False
-    true_expression = None
-    false_expression = None
-
-    if try_accept(tokens, '?'):
-        is_ternary = True
-        true_expression = parse_expression(tokens)
-        accept(tokens, ':')
-        false_expression = parse_expressionl(tokens)
-
-        return tree.TernaryExpression(condition=expression_2,
-                                     if_true=true_expression,
-                                     if_false=false_expression)
-
-    return expression_2
-
-@parse_debug
-def parse_expression_2(tokens):
-    expression_3 = parse_expression_3(tokens)
-    expression_2_rest = None
-
-    token = tokens.look()
-    if token.value in Operator.INFIX or token.value == 'instanceof':
-        parts = parse_expression_2_rest(tokens)
-        parts.insert(0, expression_3)
-        return build_binary_operation(parts)
-
-    return expression_3
-
-@parse_debug
-def parse_expression_2_rest(tokens):
-    parts = list()
-
-    token = tokens.look()
-    while token.value in Operator.INFIX or token.value == 'instanceof':
-        if try_accept(tokens, 'instanceof'):
-            comparison_type = parse_type(tokens)
-            parts.extend(('instanceof', comparison_type))
+        if self.tokens.look().value in Operator.ASSIGNMENT:
+            assignment_type = self.tokens.next().value
+            assignment_expression = self.parse_expression()
+            return tree.Assignment(expressionl=expressionl,
+                                  type=assignment_type,
+                                  value=assignment_expression)
         else:
-            operator = parse_infix_operator(tokens)
-            expression = parse_expression_3(tokens)
-            parts.extend((operator, expression))
+            return expressionl
 
-        token = tokens.look()
+    @parse_debug
+    def parse_expressionl(self):
+        expression_2 = self.parse_expression_2()
+        is_ternary = False
+        true_expression = None
+        false_expression = None
 
-    return parts
+        if self.try_accept('?'):
+            is_ternary = True
+            true_expression = self.parse_expression()
+            self.accept(':')
+            false_expression = self.parse_expressionl()
+
+            return tree.TernaryExpression(condition=expression_2,
+                                         if_true=true_expression,
+                                         if_false=false_expression)
+
+        return expression_2
+
+    @parse_debug
+    def parse_expression_2(self):
+        expression_3 = self.parse_expression_3()
+        expression_2_rest = None
+
+        token = self.tokens.look()
+        if token.value in Operator.INFIX or token.value == 'instanceof':
+            parts = self.parse_expression_2_rest()
+            parts.insert(0, expression_3)
+            return self.build_binary_operation(parts)
+
+        return expression_3
+
+    @parse_debug
+    def parse_expression_2_rest(self):
+        parts = list()
+
+        token = self.tokens.look()
+        while token.value in Operator.INFIX or token.value == 'instanceof':
+            if self.try_accept('instanceof'):
+                comparison_type = self.parse_type()
+                parts.extend(('instanceof', comparison_type))
+            else:
+                operator = self.parse_infix_operator()
+                expression = self.parse_expression_3()
+                parts.extend((operator, expression))
+
+            token = self.tokens.look()
+
+        return parts
 
 # ------------------------------------------------------------------------------
 # -- Expression operators --
 
-@parse_debug
-def parse_expression_3(tokens):
-    prefix_operators = list()
+    @parse_debug
+    def parse_expression_3(self):
+        prefix_operators = list()
 
-    while tokens.look().value in Operator.PREFIX:
-        prefix_operators.append(tokens.next().value)
+        while self.tokens.look().value in Operator.PREFIX:
+            prefix_operators.append(self.tokens.next().value)
 
-    if would_accept(tokens, '('):
-        try:
-            with tokens:
-                accept(tokens, '(')
-                cast_target = parse_type(tokens)
-                accept(tokens, ')')
-                expression = parse_expression_3(tokens)
+        if self.would_accept('('):
+            try:
+                with self.tokens:
+                    self.accept('(')
+                    cast_target = self.parse_type()
+                    self.accept(')')
+                    expression = self.parse_expression_3()
 
-                return tree.Cast(type=cast_target,
-                                expression=expression)
-        except JavaSyntaxError:
-            pass
+                    return tree.Cast(type=cast_target,
+                                    expression=expression)
+            except JavaSyntaxError:
+                pass
 
-    primary = parse_primary(tokens)
-    primary.prefix_operators = prefix_operators
-    primary.selectors = list()
-    primary.postfix_operators = list()
+        primary = self.parse_primary()
+        primary.prefix_operators = prefix_operators
+        primary.selectors = list()
+        primary.postfix_operators = list()
 
-    token = tokens.look()
-    while token.value in '[.':
-        selector = parse_selector(tokens)
-        primary.selectors.append(selector)
+        token = self.tokens.look()
+        while token.value in '[.':
+            selector = self.parse_selector()
+            primary.selectors.append(selector)
 
-        token = tokens.look()
+            token = self.tokens.look()
 
-    while token.value in Operator.POSTFIX:
-        primary.postfix_operators.append(tokens.next().value)
-        token = tokens.look()
+        while token.value in Operator.POSTFIX:
+            primary.postfix_operators.append(self.tokens.next().value)
+            token = self.tokens.look()
 
-    return primary
+        return primary
 
-@parse_debug
-def parse_infix_operator(tokens):
-    operator = accept(tokens, Operator)
+    @parse_debug
+    def parse_infix_operator(self):
+        operator = self.accept(Operator)
 
-    if not operator in Operator.INFIX:
-        raise JavaSyntaxError("Expected infix operator")
+        if not operator in Operator.INFIX:
+            self.illegal("Expected infix operator")
 
-    if operator == '>' and try_accept(tokens, '>'):
-        operator = '>>'
+        if operator == '>' and self.try_accept('>'):
+            operator = '>>'
 
-        if try_accept(tokens, '>'):
-            operator = '>>>'
+            if self.try_accept('>'):
+                operator = '>>>'
 
-    return operator
+        return operator
 
 # ------------------------------------------------------------------------------
 # -- Primary expressions --
 
-@parse_debug
-def parse_primary(tokens):
-    token = tokens.look()
+    @parse_debug
+    def parse_primary(self):
+        token = self.tokens.look()
 
-    if isinstance(token, Literal):
-        return parse_literal(tokens)
+        if isinstance(token, Literal):
+            return self.parse_literal()
 
-    elif token.value == '(':
-        return parse_par_expression(tokens)
+        elif token.value == '(':
+            return self.parse_par_expression()
 
-    elif try_accept(tokens, 'this'):
-        arguments = None
+        elif self.try_accept('this'):
+            arguments = None
 
-        if would_accept(tokens, '('):
-            arguments = parse_arguments(tokens)
-            return tree.ExplicitConstructorInvocation(arguments=arguments)
+            if self.would_accept('('):
+                arguments = self.parse_arguments()
+                return tree.ExplicitConstructorInvocation(arguments=arguments)
 
-        return tree.This()
+            return tree.This()
 
-    elif try_accept(tokens, 'super'):
-        super_suffix = parse_super_suffix(tokens)
-        return super_suffix
+        elif self.try_accept('super'):
+            super_suffix = self.parse_super_suffix()
+            return super_suffix
 
-    elif try_accept(tokens, 'new'):
-        return parse_creator(tokens)
+        elif self.try_accept('new'):
+            return self.parse_creator()
 
-    elif token.value == '<':
-        type_arguments = parse_nonwildcard_type_arguments(tokens)
+        elif token.value == '<':
+            type_arguments = self.parse_nonwildcard_type_arguments()
 
-        if try_accept(tokens, 'this'):
-            arguments = parse_arguments(tokens)
-            return tree.ExplicitConstructorInvocation(type_arguments=type_arguments,
-                                                     arguments=arguments)
-        else:
-            invocation = parse_explicit_generic_invocation_suffix(tokens)
-            invocation.type_arguments = type_arguments
+            if self.try_accept('this'):
+                arguments = self.parse_arguments()
+                return tree.ExplicitConstructorInvocation(type_arguments=type_arguments,
+                                                         arguments=arguments)
+            else:
+                invocation = self.parse_explicit_generic_invocation_suffix()
+                invocation.type_arguments = type_arguments
 
-            return invocation
+                return invocation
 
-    elif isinstance(token, Identifier):
-        qualified_identifier = [parse_identifier(tokens)]
+        elif isinstance(token, Identifier):
+            qualified_identifier = [self.parse_identifier()]
 
-        while would_accept(tokens, '.', Identifier):
-            accept(tokens, '.')
-            identifier = parse_identifier(tokens)
-            qualified_identifier.append(identifier)
+            while self.would_accept('.', Identifier):
+                self.accept('.')
+                identifier = self.parse_identifier()
+                qualified_identifier.append(identifier)
 
-        identifier_suffix = parse_identifier_suffix(tokens)
+            identifier_suffix = self.parse_identifier_suffix()
 
-        if isinstance(identifier_suffix, (tree.MemberReference, tree.MethodInvocation)):
-            # Take the last identifer as the member and leave the rest for the qualifier
-            identifier_suffix.member = qualified_identifier.pop()
+            if isinstance(identifier_suffix, (tree.MemberReference, tree.MethodInvocation)):
+                # Take the last identifer as the member and leave the rest for the qualifier
+                identifier_suffix.member = qualified_identifier.pop()
 
-        identifier_suffix.qualifier = '.'.join(qualified_identifier)
+            identifier_suffix.qualifier = '.'.join(qualified_identifier)
 
-        return identifier_suffix
+            return identifier_suffix
 
-    elif isinstance(token, BasicType):
-        base_type = parse_basic_type(tokens)
-        base_type.dimensions = parse_array_dimension(tokens)
-        accept(tokens, '.', 'class')
+        elif isinstance(token, BasicType):
+            base_type = self.parse_basic_type()
+            base_type.dimensions = self.parse_array_dimension()
+            self.accept('.', 'class')
 
-        return tree.ClassReference(type=base_type)
+            return tree.ClassReference(type=base_type)
 
-    elif try_accept(tokens, 'void'):
-        accept(tokens, '.', 'class')
-        return tree.VoidClassReference()
+        elif self.try_accept('void'):
+            self.accept('.', 'class')
+            return tree.VoidClassReference()
 
-    raise JavaSyntaxError("Expected expression")
+        self.illegal("Expected expression")
 
-@parse_debug
-def parse_literal(tokens):
-    literal = accept(tokens, Literal)
-    return tree.Literal(value=literal)
+    @parse_debug
+    def parse_literal(self):
+        literal = self.accept(Literal)
+        return tree.Literal(value=literal)
 
-@parse_debug
-def parse_par_expression(tokens):
-    accept(tokens, '(')
-    expression = parse_expression(tokens)
-    accept(tokens, ')')
+    @parse_debug
+    def parse_par_expression(self):
+        self.accept('(')
+        expression = self.parse_expression()
+        self.accept(')')
 
-    return expression
+        return expression
 
-@parse_debug
-def parse_arguments(tokens):
-    expressions = list()
+    @parse_debug
+    def parse_arguments(self):
+        expressions = list()
 
-    accept(tokens, '(')
+        self.accept('(')
 
-    if try_accept(tokens, ')'):
+        if self.try_accept(')'):
+            return expressions
+
+        while True:
+            expression = self.parse_expression()
+            expressions.append(expression)
+
+            if not self.try_accept(','):
+                break
+
+        self.accept(')')
+
         return expressions
 
-    while True:
-        expression = parse_expression(tokens)
-        expressions.append(expression)
+    @parse_debug
+    def parse_super_suffix(self):
+        identifier = None
+        type_arguments = None
+        arguments = None
 
-        if not try_accept(tokens, ','):
-            break
+        if self.try_accept('.'):
+            if self.would_accept('<'):
+                type_arguments = self.parse_nonwildcard_type_arguments()
 
-    accept(tokens, ')')
+            identifier = self.parse_identifier()
 
-    return expressions
+            if self.would_accept('('):
+                arguments = self.parse_arguments()
+        else:
+            arguments = self.parse_arguments()
 
-@parse_debug
-def parse_super_suffix(tokens):
-    identifier = None
-    type_arguments = None
-    arguments = None
+        if identifier and arguments:
+            return tree.SuperMethodInvocation(member=identifier,
+                                             arguments=arguments,
+                                             type_arguments=type_arguments)
+        elif arguments:
+            return tree.SuperConstructorInvocation(arguments=arguments)
+        else:
+            return tree.SuperMemberReference(member=identifier)
 
-    if try_accept(tokens, '.'):
-        if would_accept(tokens, '<'):
-            type_arguments = parse_nonwildcard_type_arguments(tokens)
+    @parse_debug
+    def parse_explicit_generic_invocation_suffix(self):
+        java_super = False
+        identifier = None
+        arguments = None
 
-        identifier = parse_identifier(tokens)
-
-        if would_accept(tokens, '('):
-            arguments = parse_arguments(tokens)
-    else:
-        arguments = parse_arguments(tokens)
-
-    if identifier and arguments:
-        return tree.SuperMethodInvocation(member=identifier,
-                                         arguments=arguments,
-                                         type_arguments=type_arguments)
-    elif arguments:
-        return tree.SuperConstructorInvocation(arguments=arguments)
-    else:
-        return tree.SuperMemberReference(member=identifier)
-
-@parse_debug
-def parse_explicit_generic_invocation_suffix(tokens):
-    java_super = False
-    identifier = None
-    arguments = None
-
-    if try_accept(tokens, 'super'):
-        return parse_super_suffix(tokens)
-    else:
-        identifier = parse_identifier(tokens)
-        arguments = parse_arguments(tokens)
-        return tree.MethodInvocation(member=identifier,
-                                    arguments=arguments)
+        if self.try_accept('super'):
+            return self.parse_super_suffix()
+        else:
+            identifier = self.parse_identifier()
+            arguments = self.parse_arguments()
+            return tree.MethodInvocation(member=identifier,
+                                        arguments=arguments)
 
 # ------------------------------------------------------------------------------
 # -- Creators --
 
-@parse_debug
-def parse_creator(tokens):
-    constructor_type_arguments = None
+    @parse_debug
+    def parse_creator(self):
+        constructor_type_arguments = None
 
-    if would_accept(tokens, BasicType):
-        created_name = parse_basic_type(tokens)
-        rest = parse_array_creator_rest(tokens)
-        rest.type = created_name
-        return rest
+        if self.would_accept(BasicType):
+            created_name = self.parse_basic_type()
+            rest = self.parse_array_creator_rest()
+            rest.type = created_name
+            return rest
 
-    if would_accept(tokens, '<'):
-        constructor_type_arguments = parse_nonwildcard_type_arguments(tokens)
+        if self.would_accept('<'):
+            constructor_type_arguments = self.parse_nonwildcard_type_arguments()
 
-    created_name = parse_created_name(tokens)
+        created_name = self.parse_created_name()
 
-    if would_accept(tokens, '['):
-        if constructor_type_arguments:
-            raise JavaSyntaxError("Array creator not allowed with generic constructor type arguments")
+        if self.would_accept('['):
+            if constructor_type_arguments:
+                self.illegal("Array creator not allowed with generic constructor type arguments")
 
-        rest = parse_array_creator_rest(tokens)
-        rest.type = created_name
-        return rest
-    else:
-        arguments, body = parse_class_creator_rest(tokens)
-        return tree.ClassCreator(constructor_type_arguments=constructor_type_arguments,
-                                type=created_name,
-                                arguments=arguments,
-                                body=body)
-
-@parse_debug
-def parse_created_name(tokens):
-    created_name = tree.ReferenceType()
-    tail = created_name
-
-    while True:
-        tail.name = parse_identifier(tokens)
-
-        if would_accept(tokens, '<'):
-            tail.arguments = parse_type_arguments_or_diamond(tokens)
-
-        if try_accept(tokens, '.'):
-            tail.sub_type = tree.ReferenceType()
-            tail = tail.sub_type
+            rest = self.parse_array_creator_rest()
+            rest.type = created_name
+            return rest
         else:
-            break
+            arguments, body = self.parse_class_creator_rest()
+            return tree.ClassCreator(constructor_type_arguments=constructor_type_arguments,
+                                    type=created_name,
+                                    arguments=arguments,
+                                    body=body)
 
-    return created_name
+    @parse_debug
+    def parse_created_name(self):
+        created_name = tree.ReferenceType()
+        tail = created_name
 
-@parse_debug
-def parse_class_creator_rest(tokens):
-    arguments = parse_arguments(tokens)
-    class_body = None
+        while True:
+            tail.name = self.parse_identifier()
 
-    if would_accept(tokens, '{'):
-        class_body = parse_class_body(tokens)
+            if self.would_accept('<'):
+                tail.arguments = self.parse_type_arguments_or_diamond()
 
-    return (arguments, class_body)
+            if self.try_accept('.'):
+                tail.sub_type = tree.ReferenceType()
+                tail = tail.sub_type
+            else:
+                break
 
-@parse_debug
-def parse_array_creator_rest(tokens):
-    if would_accept(tokens, '[', ']'):
-        array_dimension = parse_array_dimension(tokens)
-        array_initializer = parse_array_initializer(tokens)
+        return created_name
 
-        return tree.ArrayCreator(dimensions=array_dimension,
-                                initializer=array_initializer)
+    @parse_debug
+    def parse_class_creator_rest(self):
+        arguments = self.parse_arguments()
+        class_body = None
 
-    else:
-        array_dimensions = list()
+        if self.would_accept('{'):
+            class_body = self.parse_class_body()
 
-        while would_accept(tokens, '[') and not would_accept(tokens, '[', ']'):
-            accept(tokens, '[')
-            expression = parse_expression(tokens)
-            array_dimensions.append(expression)
-            accept(tokens, ']')
+        return (arguments, class_body)
 
-        array_dimensions += parse_array_dimension(tokens)
-        return tree.ArrayCreator(dimensions=array_dimensions)
+    @parse_debug
+    def parse_array_creator_rest(self):
+        if self.would_accept('[', ']'):
+            array_dimension = self.parse_array_dimension()
+            array_initializer = self.parse_array_initializer()
 
-@parse_debug
-def parse_identifier_suffix(tokens):
-    if try_accept(tokens, '[', ']'):
-        array_dimension = [None] + parse_array_dimension(tokens)
-        accept(tokens, '.', 'class')
-        return tree.ClassReference(type=tree.Type(dimensions=array_dimension))
+            return tree.ArrayCreator(dimensions=array_dimension,
+                                    initializer=array_initializer)
 
-    elif would_accept(tokens, '('):
-        arguments = parse_arguments(tokens)
-        return tree.MethodInvocation(arguments=arguments)
+        else:
+            array_dimensions = list()
 
-    elif try_accept(tokens, '.', 'class'):
-        return tree.ClassReference()
+            while self.would_accept('[') and not self.would_accept('[', ']'):
+                self.accept('[')
+                expression = self.parse_expression()
+                array_dimensions.append(expression)
+                self.accept(']')
 
-    elif try_accept(tokens, '.', 'this'):
-        return tree.This()
+            array_dimensions += self.parse_array_dimension()
+            return tree.ArrayCreator(dimensions=array_dimensions)
 
-    elif would_accept(tokens, '.', '<'):
-        tokens.next()
-        return parse_explicit_generic_invocation(tokens)
+    @parse_debug
+    def parse_identifier_suffix(self):
+        if self.try_accept('[', ']'):
+            array_dimension = [None] + self.parse_array_dimension()
+            self.accept('.', 'class')
+            return tree.ClassReference(type=tree.Type(dimensions=array_dimension))
 
-    elif try_accept(tokens, '.', 'new'):
-        type_arguments = None
+        elif self.would_accept('('):
+            arguments = self.parse_arguments()
+            return tree.MethodInvocation(arguments=arguments)
 
-        if would_accept(tokens, '<'):
-            type_arguments = parse_nonwildcard_type_arguments(tokens)
+        elif self.try_accept('.', 'class'):
+            return tree.ClassReference()
 
-        inner_creator = parse_inner_creator(tokens)
-        inner_creator.constructor_type_arguments = type_arguments
-
-        return inner_creator
-
-    elif would_accept(tokens, '.', 'super', '('):
-        accept(tokens, '.', 'super')
-        arguments = parse_arguments(tokens)
-        return tree.SuperConstructorInvocation(arguments=arguments)
-
-    else:
-        return tree.MemberReference()
-
-@parse_debug
-def parse_explicit_generic_invocation(tokens):
-    type_arguments = parse_nonwildcard_type_arguments(tokens)
-
-    invocation = parse_explicit_generic_invocation_suffix(tokens)
-    invocation.type_arguments = type_arguments
-
-    return invocation
-
-@parse_debug
-def parse_inner_creator(tokens):
-    identifier = parse_identifier(tokens)
-    type_arguments = None
-
-    if would_accept(tokens, '<'):
-        type_arguments = parse_nonwildcard_type_arguments_or_diamond(tokens)
-
-    java_type = tree.ReferenceType(name=identifier,
-                                  arguments=type_arguments)
-
-    arguments, class_body = parse_class_creator_rest(tokens)
-
-    return tree.InnerClassCreator(type=java_type,
-                                 arguments=arguments,
-                                 body=body)
-
-@parse_debug
-def parse_selector(tokens):
-    if try_accept(tokens, '['):
-        expression = parse_expression(tokens)
-        accept(tokens, ']')
-        return tree.ArraySelector(index=expression)
-
-    elif try_accept(tokens, '.'):
-
-        token = tokens.look()
-        if isinstance(token, Identifier):
-            identifier = tokens.next().value
-            arguments = None
-
-            if would_accept(tokens, '('):
-                arguments = parse_arguments(tokens)
-
-            return tree.MethodInvocation(member=identifier,
-                                        arguments=arguments)
-
-        elif would_accept(tokens, '<'):
-            return parse_explicit_generic_invocation(tokens)
-        elif try_accept(tokens, 'this'):
+        elif self.try_accept('.', 'this'):
             return tree.This()
-        elif try_accept(tokens, 'super'):
-            return parse_super_suffix(tokens)
-        elif try_accept(tokens, 'new'):
+
+        elif self.would_accept('.', '<'):
+            self.tokens.next()
+            return self.parse_explicit_generic_invocation()
+
+        elif self.try_accept('.', 'new'):
             type_arguments = None
 
-            if would_accept(tokens, '<'):
-                type_arguments = parse_nonwildcard_type_arguments(tokens)
+            if self.would_accept('<'):
+                type_arguments = self.parse_nonwildcard_type_arguments()
 
-            inner_creator = parse_inner_creator(tokens)
+            inner_creator = self.parse_inner_creator()
             inner_creator.constructor_type_arguments = type_arguments
 
             return inner_creator
 
-    raise JavaSyntaxError("Expected selector")
+        elif self.would_accept('.', 'super', '('):
+            self.accept('.', 'super')
+            arguments = self.parse_arguments()
+            return tree.SuperConstructorInvocation(arguments=arguments)
+
+        else:
+            return tree.MemberReference()
+
+    @parse_debug
+    def parse_explicit_generic_invocation(self):
+        type_arguments = self.parse_nonwildcard_type_arguments()
+
+        invocation = self.parse_explicit_generic_invocation_suffix()
+        invocation.type_arguments = type_arguments
+
+        return invocation
+
+    @parse_debug
+    def parse_inner_creator(self):
+        identifier = self.parse_identifier()
+        type_arguments = None
+
+        if self.would_accept('<'):
+            type_arguments = self.parse_nonwildcard_type_arguments_or_diamond()
+
+        java_type = tree.ReferenceType(name=identifier,
+                                      arguments=type_arguments)
+
+        arguments, class_body = self.parse_class_creator_rest()
+
+        return tree.InnerClassCreator(type=java_type,
+                                     arguments=arguments,
+                                     body=body)
+
+    @parse_debug
+    def parse_selector(self):
+        if self.try_accept('['):
+            expression = self.parse_expression()
+            self.accept(']')
+            return tree.ArraySelector(index=expression)
+
+        elif self.try_accept('.'):
+
+            token = self.tokens.look()
+            if isinstance(token, Identifier):
+                identifier = self.tokens.next().value
+                arguments = None
+
+                if self.would_accept('('):
+                    arguments = self.parse_arguments()
+
+                return tree.MethodInvocation(member=identifier,
+                                            arguments=arguments)
+
+            elif self.would_accept('<'):
+                return self.parse_explicit_generic_invocation()
+            elif self.try_accept('this'):
+                return tree.This()
+            elif self.try_accept('super'):
+                return self.parse_super_suffix()
+            elif self.try_accept('new'):
+                type_arguments = None
+
+                if self.would_accept('<'):
+                    type_arguments = self.parse_nonwildcard_type_arguments()
+
+                inner_creator = self.parse_inner_creator()
+                inner_creator.constructor_type_arguments = type_arguments
+
+                return inner_creator
+
+        self.illegal("Expected selector")
 
 # ------------------------------------------------------------------------------
 # -- Enum and annotation body --
 
-@parse_debug
-def parse_enum_body(tokens):
-    constants = list()
-    body_declarations = list()
+    @parse_debug
+    def parse_enum_body(self):
+        constants = list()
+        body_declarations = list()
 
-    accept(tokens, '{')
+        self.accept('{')
 
-    if not try_accept(tokens, ','):
-        while not (would_accept(tokens, ';') or would_accept(tokens, '}')):
-            constant = parse_enum_constant(tokens)
-            constants.append(constant)
+        if not self.try_accept(','):
+            while not (self.would_accept(';') or self.would_accept('}')):
+                constant = self.parse_enum_constant()
+                constants.append(constant)
 
-            if not try_accept(tokens, ','):
-                break
+                if not self.try_accept(','):
+                    break
 
-    if try_accept(tokens, ';'):
-        while not would_accept(tokens, '}'):
-            declaration = parse_class_body_declaration(tokens)
+        if self.try_accept(';'):
+            while not self.would_accept('}'):
+                declaration = self.parse_class_body_declaration()
 
-            if declaration:
-                body_declarations.append(declaration)
+                if declaration:
+                    body_declarations.append(declaration)
 
-    accept(tokens, '}')
+        self.accept('}')
 
-    return tree.EnumBody(constants=constants,
-                         declarations=body_declarations)
+        return tree.EnumBody(constants=constants,
+                             declarations=body_declarations)
 
-@parse_debug
-def parse_enum_constant(tokens):
-    annotations = None
-    constant_name = None
-    arguments = None
-    body = None
+    @parse_debug
+    def parse_enum_constant(self):
+        annotations = None
+        constant_name = None
+        arguments = None
+        body = None
 
-    if would_accept(tokens, Annotation):
-        annotations = parse_annotations(tokens)
+        if self.would_accept(Annotation):
+            annotations = self.parse_annotations()
 
-    constant_name = parse_identifier(tokens)
+        constant_name = self.parse_identifier()
 
-    if would_accept(tokens, '('):
-        arguments = parse_arguments(tokens)
+        if self.would_accept('('):
+            arguments = self.parse_arguments()
 
-    if would_accept(tokens, '{'):
-        body = parse_class_body(tokens)
+        if self.would_accept('{'):
+            body = self.parse_class_body()
 
-    return tree.EnumConstantDeclaration(annotations=annotations,
-                                       name=constant_name,
-                                       arguments=arguments,
-                                       body=body)
+        return tree.EnumConstantDeclaration(annotations=annotations,
+                                           name=constant_name,
+                                           arguments=arguments,
+                                           body=body)
 
-@parse_debug
-def parse_annotation_type_body(tokens):
-    declarations = None
+    @parse_debug
+    def parse_annotation_type_body(self):
+        declarations = None
 
-    accept(tokens, '{')
-    declarations = parse_annotation_type_element_declarations(tokens)
-    accept(tokens, '}')
+        self.accept('{')
+        declarations = self.parse_annotation_type_element_declarations()
+        self.accept('}')
 
-    return declarations
+        return declarations
 
-@parse_debug
-def parse_annotation_type_element_declarations(tokens):
-    declarations = list()
+    @parse_debug
+    def parse_annotation_type_element_declarations(self):
+        declarations = list()
 
-    while not would_accept(tokens, '}'):
-        declaration = parse_annotation_type_element_declaration(tokens)
-        declarations.append(declaration)
+        while not self.would_accept('}'):
+            declaration = self.parse_annotation_type_element_declaration()
+            declarations.append(declaration)
 
-    return declarations
+        return declarations
 
-@parse_debug
-def parse_annotation_type_element_declaration(tokens):
-    modifiers, annotations = parse_modifiers(tokens)
-    declaration = None
+    @parse_debug
+    def parse_annotation_type_element_declaration(self):
+        modifiers, annotations = self.parse_modifiers()
+        declaration = None
 
-    if would_accept(tokens, 'class'):
-        declaration = parse_normal_class_declaration(tokens)
-    elif would_accept(tokens, 'interface'):
-        declaration = parse_normal_interface_declaration(tokens)
-    elif would_accept(tokens, 'enum'):
-        declaration = parse_enum_declaration(tokens)
-    elif is_annotation_declaration(tokens):
-        declaration = parse_annotation_type_declaration(tokens)
-    else:
-        attribute_type = parse_type(tokens)
-        attribute_name = parse_identifier(tokens)
-        declaration = parse_annotation_method_or_constant_rest(tokens)
-        accept(tokens, ';')
-
-        if isinstance(declaration, tree.AnnotationMethod):
-            declaration.name = attribute_name
-            declaration.return_type = attribute_type
+        if self.would_accept('class'):
+            declaration = self.parse_normal_class_declaration()
+        elif self.would_accept('interface'):
+            declaration = self.parse_normal_interface_declaration()
+        elif self.would_accept('enum'):
+            declaration = self.parse_enum_declaration()
+        elif self.is_annotation_declaration():
+            declaration = self.parse_annotation_type_declaration()
         else:
-            declaration.declarators[0].name = attribute_name
-            declaration.type = attribute_type
+            attribute_type = self.parse_type()
+            attribute_name = self.parse_identifier()
+            declaration = self.parse_annotation_method_or_constant_rest()
+            self.accept(';')
 
-    declaration.modifiers = modifiers
-    declaration.annotations = annotations
+            if isinstance(declaration, tree.AnnotationMethod):
+                declaration.name = attribute_name
+                declaration.return_type = attribute_type
+            else:
+                declaration.declarators[0].name = attribute_name
+                declaration.type = attribute_type
 
-    return declaration
+        declaration.modifiers = modifiers
+        declaration.annotations = annotations
 
-@parse_debug
-def parse_annotation_method_or_constant_rest(tokens):
-    if try_accept(tokens, '('):
-        accept(tokens, ')')
+        return declaration
 
-        array_dimension = parse_array_dimension(tokens)
-        default = None
+    @parse_debug
+    def parse_annotation_method_or_constant_rest(self):
+        if self.try_accept('('):
+            self.accept(')')
 
-        if try_accept(tokens, 'default'):
-            default = parse_element_value(tokens)
+            array_dimension = self.parse_array_dimension()
+            default = None
 
-        return tree.AnnotationMethod(dimensions=array_dimension,
-                                    default=default)
-    else:
-        return parse_constant_declarators_rest(tokens)
+            if self.try_accept('default'):
+                default = self.parse_element_value()
 
-# ------------------------------------------------------------------------------
-# ---- Parsing entry point ----
+            return tree.AnnotationMethod(dimensions=array_dimension,
+                                        default=default)
+        else:
+            return self.parse_constant_declarators_rest()
 
-def parse(tokens):
-    tokens = util.LookAheadListIterator(tokens)
-    tokens.set_default(EndOfInput(None))
-
-    try:
-        return parse_compilation_unit(tokens)
-
-    except JavaSyntaxError as e:
-        # Attach current token position if not already specified
-        if not e.at:
-            e.at = tokens.look()
-        raise e
-
-# ------------------------------------------------------------------------------
-# ---- Debug control ----
-
-def enable_debug():
-    global DEBUG
-    DEBUG = True
-
-def disable_debug():
-    global DEBUG
-    DEBUG = False
+def parse(tokens, debug=False):
+    parser = Parser(tokens)
+    parser.set_debug(debug)
+    return parser.parse()
