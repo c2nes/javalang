@@ -383,6 +383,12 @@ class JavaTokenizer(object):
 
         self.error('Could not decode input data')
 
+    def is_java_identifier_start(self, c):
+        if c.isalpha() or c in '_$':
+            return True
+
+        return unicodedata.category(c) in ('Lu', 'Ll')
+
     def read_identifier(self):
         self.j = self.i + 1
 
@@ -457,12 +463,6 @@ class JavaTokenizer(object):
 
         self.data = ''.join(new_data)
         self.length = len(self.data)
-
-    def is_java_identifier_start(self, c):
-        if c.isalpha() or c in '_$':
-            return True
-
-        return unicodedata.category(c) in ('Lu', 'Ll')
 
     def tokenize(self):
         self.reset()
