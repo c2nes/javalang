@@ -428,13 +428,18 @@ class JavaTokenizer(object):
         state = NONE
 
         while j < length:
-            c = data[j]
-
             if state == NONE:
-                if c == '\\':
-                    state = ELIGIBLE
+                j = data.find('\\', j)
+
+                if j == -1:
+                    j = length
+                    break
+
+                state = ELIGIBLE
 
             elif state == ELIGIBLE:
+                c = data[j]
+
                 if c == 'u':
                     state = MARKER_FOUND
                     new_data.append(data[i:j - 1])
@@ -442,6 +447,8 @@ class JavaTokenizer(object):
                     state = NONE
 
             elif state == MARKER_FOUND:
+                c = data[j]
+
                 if c != 'u':
                     try:
                         escape_code = int(self.data[j:j+4], 16)
