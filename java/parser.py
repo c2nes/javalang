@@ -8,7 +8,7 @@ from tokenizer import (
     Annotation, Literal, Operator, JavaToken
     )
 
-ENABLE_DEBUG_SUPPORT = True
+ENABLE_DEBUG_SUPPORT = False
 
 def parse_debug(method):
     global ENABLE_DEBUG_SUPPORT
