@@ -1,4 +1,5 @@
 
+import re
 import unicodedata
 
 class LexerError(Exception):
@@ -150,22 +151,28 @@ class JavaTokenizer(object):
         self.ident_char_set = self.ident_start_char_set.copy()
         self.ident_char_set.update('0123456789')
 
+        self.whitespace_consumer = re.compile(r'[^\s]')
+
     def reset(self):
         self.i = 0
         self.j = 0
 
     def consume_whitespace(self):
-        while self.i < self.length:
-            c = self.data[self.i]
+        match = self.whitespace_consumer.search(self.data, self.i + 1)
 
-            if c == '\n':
-                self.start_of_line = self.i + 1
-                self.current_line += 1
+        if not match:
+            self.i = self.length
+            return
 
-            if not c.isspace():
-                break
+        i = match.start()
 
-            self.i += 1
+        start_of_line = self.data.rfind('\n', self.i, i)
+
+        if start_of_line != -1:
+            self.start_of_line = start_of_line
+            self.current_line += self.data.count('\n', self.i, i)
+
+        self.i = i
 
     def read_string(self):
         delim = self.data[self.i]
@@ -223,32 +230,31 @@ class JavaTokenizer(object):
         return False
 
     def read_comment(self):
-        if self.data[self.i:self.i + 2] == "//":
-            while self.i < self.length and self.data[self.i] != "\n":
-                self.i += 1
+        if self.data[self.i + 1] == '/':
+            i = self.data.find('\n', self.i + 2)
 
-            self.start_of_line = self.i + 1
+            if i == -1:
+                self.i = self.length
+                return
+
+            i += 1
+
+            self.start_of_line = i
             self.current_line += 1
+            self.i = i
 
-            self.i += 1
+        else:
+            i = self.data.find('*/', self.i + 2)
 
-        elif self.data[self.i:self.i + 2] == "/*":
-            self.i += 2
+            if i == -1:
+                self.i = self.length
+                return
 
-            last_c = ''
-            while self.i < self.length:
-                c = self.data[self.i]
+            i += 2
 
-                if c == '\n':
-                    self.start_of_line = self.i + 1
-                    self.current_line += 1
-
-                if last_c == '*' and c == '/':
-                    break
-
-                last_c = c
-                self.i += 1
-            self.i += 1
+            self.start_of_line = i
+            self.current_line += self.data.count('\n', self.i, i)
+            self.i = i
 
     def read_decimal_float_or_integer(self):
         orig_i = self.i
