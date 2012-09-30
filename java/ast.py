@@ -1,11 +1,14 @@
 
 class MetaNode(type):
     def __new__(mcs, name, bases, dict):
-        dict['attrs'] = list(dict['attrs'])
+        attrs = list(dict['attrs'])
+        dict['attrs'] = list()
 
         for base in bases:
             if hasattr(base, 'attrs'):
                 dict['attrs'].extend(base.attrs)
+
+        dict['attrs'].extend(attrs)
 
         return type.__new__(mcs, name, bases, dict)
 
