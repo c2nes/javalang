@@ -1,4 +1,6 @@
 
+import cPickle as pickle
+
 class MetaNode(type):
     def __new__(mcs, name, bases, dict):
         attrs = list(dict['attrs'])
@@ -41,39 +43,34 @@ class Node(object):
         return type(self).__name__
 
     def __iter__(self):
-        return TreeIterator(self)
+        return walk_tree(self)
 
     def filter(self, pattern):
-        for node in self:
-            if ((isinstance(pattern, type) and isinstance(node, node_type)) or
+        for path, node in self:
+            if ((isinstance(pattern, type) and isinstance(node, pattern)) or
                 (node == pattern)):
-                yield node
+                yield path, node
 
     @property
     def children(self):
         return [getattr(self, attr_name) for attr_name in self.attrs]
 
-class TreeIterator(object):
-    def __init__(self, node):
-        self.root = node
-        self.iter = self.__gen_node()
+def walk_tree(root):
+    children = None
 
-    def __iter__(self):
-        return self
+    if isinstance(root, Node):
+        yield (), root
+        children = root.children
+    else:
+        children = root
 
-    def __gen_node(self):
-        yield (), self.root
+    for child in children:
+        if isinstance(child, (Node, list, tuple)):
+            for path, node in walk_tree(child):
+                yield (root,) + path, node
 
-        for attr, child in zip(self.root.attrs, self.root.children):
-            if isinstance(child, Node):
-                for path, node in TreeIterator(child):
-                    yield ((self.root, attr),) + path, node
+def dump(ast, file):
+    pickle.dump(ast, file)
 
-            elif isinstance(child, (tuple, list)):
-                for i, childchild in enumerate(child):
-                    if isinstance(childchild, Node):
-                        for path, node in childchild:
-                            yield ((self.root, "{0}[{1}]".format(attr, i)),) + path, node
-
-    def next(self):
-        return self.iter.next()
+def load(file):
+    return pickle.load(file)

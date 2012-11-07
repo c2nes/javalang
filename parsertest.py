@@ -30,7 +30,8 @@ def parse_file(filename, debug):
 
 def dump(ast):
     for path, node in ast:
-        path = "->".join(["{0[0]}[{0[1]}]".format(p) for p in path])
+        print path, node
+        path = "->".join([repr(p) for p in path])
         node = {attr : getattr(node, attr) for attr in node.attrs if isinstance(getattr(node, attr), (set, basestring))}
         print path, node
 

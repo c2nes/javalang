@@ -656,7 +656,7 @@ class Parser(object):
                 annotation_element = self.parse_annotation_element()
             self.accept(')')
 
-        return tree.Annotation(annotation=qualified_identifier,
+        return tree.Annotation(name=qualified_identifier,
                                element=annotation_element)
 
     @parse_debug
@@ -1869,6 +1869,9 @@ class Parser(object):
                 # Take the last identifer as the member and leave the rest for the qualifier
                 identifier_suffix.member = qualified_identifier.pop()
 
+            elif isinstance(identifier_suffix, tree.ClassReference):
+                identifier_suffix.type = tree.ReferenceType(name=qualified_identifier.pop())
+
             identifier_suffix.qualifier = '.'.join(qualified_identifier)
 
             return identifier_suffix
@@ -2124,8 +2127,10 @@ class Parser(object):
                 if self.would_accept('('):
                     arguments = self.parse_arguments()
 
-                return tree.MethodInvocation(member=identifier,
-                                             arguments=arguments)
+                    return tree.MethodInvocation(member=identifier,
+                                                 arguments=arguments)
+                else:
+                    return tree.MemberReference(member=identifier)
 
             elif self.would_accept('<'):
                 return self.parse_explicit_generic_invocation()

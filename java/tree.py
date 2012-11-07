@@ -12,19 +12,22 @@ class Import(Node):
 class Declaration(Node):
     attrs = ("modifiers", "annotations")
 
+class TypeDeclaration(Declaration):
+    attrs = ()
+
 class PackageDeclaration(Declaration):
     attrs = ("name",)
 
-class ClassDeclaration(Declaration):
+class ClassDeclaration(TypeDeclaration):
     attrs = ("name", "type_parameters", "extends", "implements", "body")
 
-class EnumDeclaration(Declaration):
+class EnumDeclaration(TypeDeclaration):
     attrs = ("name", "implements", "body")
 
-class InterfaceDeclaration(Declaration):
+class InterfaceDeclaration(TypeDeclaration):
     attrs = ("name", "type_parameters", "extends", "body")
 
-class AnnotationDeclaration(Declaration):
+class AnnotationDeclaration(TypeDeclaration):
     attrs = ("name", "body")
 
 # ------------------------------------------------------------------------------
@@ -49,7 +52,7 @@ class TypeParameter(Node):
 # ------------------------------------------------------------------------------
 
 class Annotation(Node):
-    attrs = ("annotation", "element")
+    attrs = ("name", "element")
 
 class ElementValuePair(Node):
     attrs = ("name", "value")
