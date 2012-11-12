@@ -9,26 +9,41 @@ class CompilationUnit(Node):
 class Import(Node):
     attrs = ("path", "static", "wildcard")
 
+class Documented(Node):
+    attrs = ("documentation",)
+
 class Declaration(Node):
     attrs = ("modifiers", "annotations")
 
-class TypeDeclaration(Declaration):
-    attrs = ()
+class TypeDeclaration(Declaration, Documented):
+    attrs = ("name", "body")
+
+    @property
+    def fields(self):
+        return filter(lambda decl: isinstance(decl, FieldDeclaration), self.body)
+
+    @property
+    def methods(self):
+        return filter(lambda decl: isinstance(decl, MethodDeclaration), self.body)
+
+    @property
+    def constructors(self):
+        return filter(lambda decl: isinstance(decl, ConstructorDeclaration), self.body)
 
 class PackageDeclaration(Declaration):
     attrs = ("name",)
 
 class ClassDeclaration(TypeDeclaration):
-    attrs = ("name", "type_parameters", "extends", "implements", "body")
+    attrs = ("type_parameters", "extends", "implements")
 
 class EnumDeclaration(TypeDeclaration):
-    attrs = ("name", "implements", "body")
+    attrs = ("implements",)
 
 class InterfaceDeclaration(TypeDeclaration):
-    attrs = ("name", "type_parameters", "extends", "body")
+    attrs = ("type_parameters", "extends",)
 
 class AnnotationDeclaration(TypeDeclaration):
-    attrs = ("name", "body")
+    attrs = ()
 
 # ------------------------------------------------------------------------------
 
@@ -39,7 +54,7 @@ class BasicType(Type):
     attrs = ()
 
 class ReferenceType(Type):
-    attrs = ("arguments", "subtype")
+    attrs = ("arguments", "sub_type")
 
 class TypeArgument(Node):
     attrs = ("type", "pattern_type")
@@ -62,22 +77,7 @@ class ElementArrayValue(Node):
 
 # ------------------------------------------------------------------------------
 
-class TypeBody(Node):
-    attrs = ("declarations",)
-
-    @property
-    def fields(self):
-        return filter(lambda decl: isinstance(decl, FieldDeclaration), self.declarations)
-
-    @property
-    def methods(self):
-        return filter(lambda decl: isinstance(decl, MethodDeclaration), self.declarations)
-
-    @property
-    def constructors(self):
-        return filter(lambda decl: isinstance(decl, ConstructorDeclaration), self.declarations)
-
-class Member(Node):
+class Member(Documented):
     attrs = ()
 
 class MethodDeclaration(Member, Declaration):
@@ -86,7 +86,7 @@ class MethodDeclaration(Member, Declaration):
 class FieldDeclaration(Member, Declaration):
     attrs = ("type", "declarators")
 
-class ConstructorDeclaration(Declaration):
+class ConstructorDeclaration(Declaration, Documented):
     attrs = ("type_parameters", "name", "parameters", "throws", "body")
 
 # ------------------------------------------------------------------------------

@@ -294,8 +294,8 @@ class Parser(object):
                 type_declarations.append(type_declaration)
 
         return tree.CompilationUnit(package=package,
-                                   imports=import_declarations,
-                                   types=type_declarations)
+                                    imports=import_declarations,
+                                    types=type_declarations)
 
     @parse_debug
     def parse_import_declaration(self):
@@ -335,7 +335,7 @@ class Parser(object):
 
     @parse_debug
     def parse_class_or_interface_declaration(self):
-        modifiers, annotations = self.parse_modifiers()
+        modifiers, annotations, javadoc = self.parse_modifiers()
         type_declaration = None
 
         token = self.tokens.look()
@@ -352,6 +352,7 @@ class Parser(object):
 
         type_declaration.modifiers = modifiers
         type_declaration.annotations = annotations
+        type_declaration.documentation = javadoc
 
         return type_declaration
 
@@ -616,6 +617,12 @@ class Parser(object):
     def parse_modifiers(self):
         annotations = list()
         modifiers = set()
+        javadoc = None
+
+        next_token = self.tokens.look()
+
+        if next_token:
+            javadoc = next_token.javadoc
 
         while True:
             if self.would_accept(Modifier):
@@ -628,7 +635,7 @@ class Parser(object):
             else:
                 break
 
-        return (modifiers, annotations)
+        return (modifiers, annotations, javadoc)
 
     @parse_debug
     def parse_annotations(self):
@@ -764,7 +771,7 @@ class Parser(object):
 
     @parse_debug
     def parse_member_declaration(self):
-        modifiers, annotations = self.parse_modifiers()
+        modifiers, annotations, javadoc = self.parse_modifiers()
         member = None
 
         token = self.tokens.look()
@@ -798,6 +805,7 @@ class Parser(object):
 
         member.modifiers = modifiers
         member.annotations = annotations
+        member.documentation = javadoc
 
         return member
 
@@ -943,11 +951,12 @@ class Parser(object):
         if self.try_accept(';'):
             return None
 
-        modifiers, annotations = self.parse_modifiers()
+        modifiers, annotations, javadoc = self.parse_modifiers()
 
         declaration = self.parse_interface_member_declaration()
         declaration.modifiers = modifiers
         declaration.annotations = annotations
+        declaration.documentation = javadoc
 
         return declaration
 
@@ -1614,7 +1623,7 @@ class Parser(object):
 
     @parse_debug
     def parse_for_var_control(self):
-        modifiers, annotations = self.parse_modifiers()
+        modifiers, annotations = self.parse_variable_modifiers()
         var_type = self.parse_type()
         var_name = self.parse_identifier()
         var_type.dimensions += self.parse_array_dimension()
@@ -2226,7 +2235,7 @@ class Parser(object):
 
     @parse_debug
     def parse_annotation_type_element_declaration(self):
-        modifiers, annotations = self.parse_modifiers()
+        modifiers, annotations, javadoc = self.parse_modifiers()
         declaration = None
 
         if self.would_accept('class'):
@@ -2252,6 +2261,7 @@ class Parser(object):
 
         declaration.modifiers = modifiers
         declaration.annotations = annotations
+        declaration.documentation = javadoc
 
         return declaration
 
