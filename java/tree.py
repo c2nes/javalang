@@ -255,7 +255,7 @@ class InnerClassCreator(Creator):
 class EnumBody(Node):
     attrs = ("constants", "declarations")
 
-class EnumConstantDeclaration(Declaration):
+class EnumConstantDeclaration(Declaration, Documented):
     attrs = ("name", "arguments", "body")
 
 class AnnotationMethod(Declaration):

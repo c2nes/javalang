@@ -620,7 +620,6 @@ class Parser(object):
         javadoc = None
 
         next_token = self.tokens.look()
-
         if next_token:
             javadoc = next_token.javadoc
 
@@ -2192,10 +2191,15 @@ class Parser(object):
 
     @parse_debug
     def parse_enum_constant(self):
-        annotations = None
+        annotations = list()
+        javadoc = None
         constant_name = None
         arguments = None
         body = None
+
+        next_token = self.tokens.look()
+        if next_token:
+            javadoc = next_token.javadoc
 
         if self.would_accept(Annotation):
             annotations = self.parse_annotations()
@@ -2211,7 +2215,8 @@ class Parser(object):
         return tree.EnumConstantDeclaration(annotations=annotations,
                                             name=constant_name,
                                             arguments=arguments,
-                                            body=body)
+                                            body=body,
+                                            documentation=javadoc)
 
     @parse_debug
     def parse_annotation_type_body(self):
