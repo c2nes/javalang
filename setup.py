@@ -7,7 +7,7 @@ setup(
     version = "0.9.0",
     author = "Chris Thunes",
     author_email = "cthunes@brewtab.com",
-    url = "http://github.com/c2nes/pylangtools",
+    url = "http://github.com/c2nes/javalang",
     description = "Pure Python Java parser and tools",
     classifiers = [
         "Programming Language :: Python",
