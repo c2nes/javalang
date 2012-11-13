@@ -13,11 +13,11 @@ class JavaToken(object):
 
     def __repr__(self):
         if self.position:
-            return '{0} "{1}" line {2[0]}, position {2[1]}'.format(
-                self.__class__.__name__, self.value, self.position
+            return '%s "%s" line %d, position %d' % (
+                self.__class__.__name__, self.value, self.position[0], self.position[1]
                 )
         else:
-            return '{0} "{1}"'.format(self.__class__.__name__, self.value)
+            return '%s "%s"' % (self.__class__.__name__, self.value)
 
     def __str__(self):
         return repr(self)
@@ -399,7 +399,7 @@ class JavaTokenizer(object):
             try:
                 data = self.data.decode(codec)
                 return data
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 pass
 
         self.error('Could not decode input data')
@@ -574,7 +574,7 @@ class JavaTokenizer(object):
         if not char:
             char = self.data[self.j]
 
-        message = u'{0} at "{1}", line {2}: {3}'.format(message, char, line_number, line)
+        message = u'%s at "%s", line %s: %s' % (message, char, line_number, line)
 
         raise LexerError(message)
 

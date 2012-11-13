@@ -1,4 +1,6 @@
 
+from __future__ import with_statement
+
 class LookAheadIterator(object):
     def __init__(self, iterable):
         self.iterable = iter(iterable)
@@ -38,7 +40,7 @@ class LookAheadIterator(object):
         if length <= i:
             try:
                 self.look_ahead.extend([self.iterable.next() for _ in range(length, i + 1)])
-            except StopIteration as e:
+            except StopIteration:
                 return self.default
 
         self.value = self.look_ahead[i]

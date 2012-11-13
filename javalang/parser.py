@@ -1,4 +1,6 @@
 
+from __future__ import with_statement
+
 import sys
 import util
 
@@ -19,32 +21,32 @@ def parse_debug(method):
                 self.recursion_depth = 0
 
             if self.debug:
-                depth = "{0:2}".format(self.recursion_depth)
+                depth = "%02d" % (self.recursion_depth,)
                 token = unicode(self.tokens.look())
                 start_value = self.tokens.look().value
                 name = method.__name__
                 sep = ("-" * self.recursion_depth)
                 e_message = ""
 
-                print "{0} {1}> {2}({3})".format(depth, sep, name, token)
+                print "%s %s> %s(%s)" % (depth, sep, name, token)
 
                 self.recursion_depth += 1
 
                 try:
                     r = method(self)
 
-                except JavaSyntaxError as e:
+                except JavaSyntaxError, e:
                     e_message = e.description
                     raise
 
-                except Exception as e:
+                except Exception, e:
                     e_message = unicode(e)
                     raise
 
                 finally:
                     token = unicode(self.tokens.last())
-                    print "{0} <{1} {2}({3}, {4}) {5}".format(
-                        depth, sep, name, start_value, token, e_message)
+                    print "%s <%s %s(%s, %s) %s" % \
+                        (depth, sep, name, start_value, token, e_message)
                     self.recursion_depth -= 1
             else:
                 self.recursion_depth += 1
@@ -129,9 +131,9 @@ class Parser(object):
             token = self.tokens.next()
 
             if isinstance(accept, basestring) and not token.value == accept:
-                self.illegal("Expected '{0}'".format(accept))
+                self.illegal("Expected '%s'" % (accept,))
             elif isinstance(accept, type) and not isinstance(token, accept):
-                self.illegal("Expected {0}".format(accept.__name__))
+                self.illegal("Expected %s" % (accept.__name__,))
 
             last = token
 
