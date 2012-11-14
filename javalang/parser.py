@@ -989,12 +989,13 @@ class Parser(object):
         java_type = self.parse_type()
         name = self.parse_identifier()
         member = self.parse_interface_method_or_field_rest()
-        member.name = name
 
         if isinstance(member, tree.MethodDeclaration):
             java_type.dimensions += member.return_type.dimensions
+            member.name = name
             member.return_type = java_type
         else:
+            member.declarators[0].name = name
             member.type = java_type
 
         return member
