@@ -72,6 +72,9 @@ def _get_indent_level(s):
 def _left_justify(s):
     lines = s.splitlines()
 
+    if not lines:
+        return ''
+
     indent_levels = []
     for line in lines:
         if line.strip():
