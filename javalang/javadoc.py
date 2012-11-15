@@ -8,7 +8,7 @@ class DocBlock(object):
     def __init__(self):
         self.description = ''
         self.return_doc = None
-        self.params = {}
+        self.params = []
 
         self.author = None
         self.deprecated = False
@@ -27,7 +27,7 @@ class DocBlock(object):
                 param, description = value.split(None, 1)
             except ValueError:
                 param, description = value, ''
-            self.params[param] = join(description)
+            self.params.append((param, join(description)))
 
         elif name in ('throws', 'exception'):
             try:
