@@ -4,7 +4,7 @@ from distutils.core import setup
 setup(
     name = "javalang",
     packages = ["javalang"],
-    version = "0.9.2",
+    version = "0.9.3",
     author = "Chris Thunes",
     author_email = "cthunes@brewtab.com",
     url = "http://github.com/c2nes/javalang",
