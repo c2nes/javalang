@@ -49,6 +49,7 @@ class DocBlock(object):
 
 blocks_re = re.compile('(^@)', re.MULTILINE)
 leading_space_re = re.compile(r'^\s*\*', re.MULTILINE)
+blocks_justify_re = re.compile(r'^\s*@', re.MULTILINE)
 
 def _sanitize(s):
     s = s.strip()
@@ -88,12 +89,15 @@ def _left_justify(s):
         lines = [line[common_indent:] for line in lines]
         return '\n'.join(lines)
 
+def _force_blocks_left(s):
+    return blocks_justify_re.sub('@', s)
+
 def parse(raw):
     sanitized = _sanitize(raw)
     uncommented = _uncomment(sanitized)
     justified = _left_justify(uncommented)
-
-    prepared = justified
+    justified_fixed = _force_blocks_left(justified)
+    prepared = justified_fixed
 
     blocks = blocks_re.split(prepared)
 
