@@ -10,7 +10,7 @@ class DocBlock(object):
         self.return_doc = None
         self.params = []
 
-        self.author = None
+        self.authors = []
         self.deprecated = False
 
         # @exception and @throw are equivalent
@@ -40,7 +40,7 @@ class DocBlock(object):
             self.return_doc = value
 
         elif name == 'author':
-            self.author = value
+            self.authors.append(value)
 
         elif name == 'deprecated':
             self.deprecated = True
