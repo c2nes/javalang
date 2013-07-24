@@ -804,6 +804,7 @@ class Parser(object):
         else:
             member = self.parse_method_or_field_declaraction()
 
+        member._position = token.position
         member.modifiers = modifiers
         member.annotations = annotations
         member.documentation = javadoc
@@ -911,7 +912,6 @@ class Parser(object):
             constructor_name = self.parse_identifier()
             method = self.parse_constructor_declarator_rest()
             method.name = constructor_name
-
         elif self.try_accept('void'):
             method_name = self.parse_identifier()
             method = self.parse_void_method_declarator_rest()
