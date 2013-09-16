@@ -133,6 +133,11 @@ class Identifier(JavaToken):
     pass
 
 class JavaTokenizer(object):
+
+    IDENT_START_CATEGORIES = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Nl', 'Pc', 'Sc'])
+
+    IDENT_PART_CATEGORIES = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mc', 'Mn', 'Nd', 'Nl', 'Pc', 'Sc'])
+
     def __init__(self, data):
         self.data = data
 
@@ -144,17 +149,10 @@ class JavaTokenizer(object):
         for v in Operator.VALUES:
             self.operators[len(v) - 1].add(v)
 
-        self.ident_start_char_set = set('_$')
-        for c in [chr(i) for i in range(ord('A'), ord('Z') + 1)]:
-            self.ident_start_char_set.add(c)
-            self.ident_start_char_set.add(c.lower())
-
-        self.ident_char_set = self.ident_start_char_set.copy()
-        self.ident_char_set.update('0123456789')
-
         self.whitespace_consumer = re.compile(r'[^\s]')
 
         self.javadoc = None
+
 
     def reset(self):
         self.i = 0
@@ -405,15 +403,12 @@ class JavaTokenizer(object):
         self.error('Could not decode input data')
 
     def is_java_identifier_start(self, c):
-        if c.isalpha() or c in '_$':
-            return True
-
-        return unicodedata.category(c) in ('Lu', 'Ll')
+        return unicodedata.category(c) in self.IDENT_START_CATEGORIES
 
     def read_identifier(self):
         self.j = self.i + 1
 
-        while self.data[self.j] in self.ident_char_set:
+        while unicodedata.category(self.data[self.j]) in self.IDENT_PART_CATEGORIES:
             self.j += 1
 
         ident = self.data[self.i:self.j]
