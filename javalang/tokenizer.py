@@ -467,7 +467,7 @@ class JavaTokenizer(object):
 
                 if c != 'u':
                     try:
-                        escape_code = int(self.data[j:j+4], 16)
+                        escape_code = int(data[j:j+4], 16)
                     except ValueError:
                         self.error('Invalid unicode escape', data[j:j+4])
 
