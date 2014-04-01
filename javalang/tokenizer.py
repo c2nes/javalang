@@ -509,7 +509,7 @@ class JavaTokenizer(object):
                 continue
 
             elif startswith in ("//", "/*"):
-                if self.try_javadoc_comment():
+                if startswith == "/*" self.try_javadoc_comment():
                     self.javadoc = self.data[self.i:self.j]
                     self.i = self.j
                 else:
