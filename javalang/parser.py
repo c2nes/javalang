@@ -1,5 +1,3 @@
-import sys
-
 import six
 
 from . import util
@@ -506,8 +504,6 @@ class Parser(object):
         base_type = None
 
         if self.try_accept('?'):
-            wildcard = True
-
             if self.tokens.look().value in ('extends', 'super'):
                 pattern_type = self.tokens.next().value
             else:
@@ -1075,7 +1071,6 @@ class Parser(object):
         type_parameters = self.parse_type_parameters()
         return_type = None
         method_name = None
-        rest = None
 
         if not self.try_accept('void'):
             return_type = self.parse_type()
@@ -1320,7 +1315,6 @@ class Parser(object):
     @parse_debug
     def parse_statement(self):
         token = self.tokens.look()
-
         if self.would_accept('{'):
             block = self.parse_block()
             return tree.BlockStatement(statements=block)
@@ -1498,8 +1492,6 @@ class Parser(object):
         self.accept('catch', '(')
 
         modifiers, annotations = self.parse_variable_modifiers()
-        catch_types = list()
-
         catch_parameter = tree.CatchClauseParameter(types=list())
 
         while True:
@@ -1722,12 +1714,10 @@ class Parser(object):
     @parse_debug
     def parse_expressionl(self):
         expression_2 = self.parse_expression_2()
-        is_ternary = False
         true_expression = None
         false_expression = None
 
         if self.try_accept('?'):
-            is_ternary = True
             true_expression = self.parse_expression()
             self.accept(':')
             false_expression = self.parse_expressionl()
@@ -1741,8 +1731,6 @@ class Parser(object):
     @parse_debug
     def parse_expression_2(self):
         expression_3 = self.parse_expression_3()
-        expression_2_rest = None
-
         token = self.tokens.look()
         if token.value in Operator.INFIX or token.value == 'instanceof':
             parts = self.parse_expression_2_rest()
@@ -1962,10 +1950,8 @@ class Parser(object):
 
     @parse_debug
     def parse_explicit_generic_invocation_suffix(self):
-        java_super = False
         identifier = None
         arguments = None
-
         if self.try_accept('super'):
             return self.parse_super_suffix()
         else:
