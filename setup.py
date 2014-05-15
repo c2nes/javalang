@@ -29,4 +29,5 @@ http://docs.oracle.com/javase/specs/jls/se7/html/.
 
 """,
     zip_safe=False,
+    test_suite="javalang.tests.util",
 )
