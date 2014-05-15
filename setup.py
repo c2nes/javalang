@@ -28,7 +28,7 @@ implementation is based on the Java language spec available at
 http://docs.oracle.com/javase/specs/jls/se7/html/.
 
 """,
-    zip_safe=False,
-    tests_require=["nose",],
-    test_suite="nose.collector",
+    zip_safe = False,
+    tests_require = ["nose",],
+    test_suite = "nose.collector",
 )
