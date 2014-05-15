@@ -1,9 +1,6 @@
 from setuptools import setup
 
 
-install_requires = ["six",]
-tests_require = install_requires[:] + ["nose",]
-
 setup(
     name = "javalang",
     packages = ["javalang"],
@@ -32,7 +29,7 @@ http://docs.oracle.com/javase/specs/jls/se7/html/.
 
 """,
     zip_safe = False,
-    install_requires = install_requires,
-    tests_require = tests_require,
+    install_requires = ['six',],
+    tests_require = ["nose",],
     test_suite = "nose.collector",
 )
