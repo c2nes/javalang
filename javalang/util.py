@@ -1,5 +1,5 @@
+import six
 
-from __future__ import with_statement
 
 class LookAheadIterator(object):
     def __init__(self, iterable):
@@ -16,10 +16,13 @@ class LookAheadIterator(object):
         self.default = value
 
     def next(self):
+        return self.__next__()
+
+    def __next__(self):
         if self.look_ahead:
             self.value = self.look_ahead.pop(0)
         else:
-            self.value = self.iterable.next()
+            self.value = six.next(self.iterable)
 
         if self.markers:
             self.markers[-1].append(self.value)
@@ -39,7 +42,8 @@ class LookAheadIterator(object):
 
         if length <= i:
             try:
-                self.look_ahead.extend([self.iterable.next() for _ in range(length, i + 1)])
+                self.look_ahead.extend([six.next(self.iterable)
+                    for _ in range(length, i + 1)])
             except StopIteration:
                 return self.default
 
@@ -101,6 +105,9 @@ class LookAheadListIterator(object):
         self.default = value
 
     def next(self):
+        return self.__next__()
+
+    def __next__(self):
         try:
             self.value = self.list[self.marker]
             self.marker += 1

@@ -1,5 +1,5 @@
 
-from ast import Node
+from .ast import Node
 
 # ------------------------------------------------------------------------------
 
@@ -20,15 +20,15 @@ class TypeDeclaration(Declaration, Documented):
 
     @property
     def fields(self):
-        return filter(lambda decl: isinstance(decl, FieldDeclaration), self.body)
+        return [decl for decl in self.body if isinstance(decl, FieldDeclaration)]
 
     @property
     def methods(self):
-        return filter(lambda decl: isinstance(decl, MethodDeclaration), self.body)
+        return [decl for decl in self.body if isinstance(decl, MethodDeclaration)]
 
     @property
     def constructors(self):
-        return filter(lambda decl: isinstance(decl, ConstructorDeclaration), self.body)
+        return [decl for decl in self.body if isinstance(decl, ConstructorDeclaration)]
 
 class PackageDeclaration(Declaration):
     attrs = ("name",)

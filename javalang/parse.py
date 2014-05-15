@@ -1,6 +1,6 @@
 
-from parser import Parser
-from tokenizer import tokenize
+from .parser import Parser
+from .tokenizer import tokenize
 
 def parse_expression(exp):
     if not exp.endswith(';'):
