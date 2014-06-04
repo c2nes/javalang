@@ -30,7 +30,7 @@ class TypeDeclaration(Declaration, Documented):
     def constructors(self):
         return filter(lambda decl: isinstance(decl, ConstructorDeclaration), self.body)
 
-class PackageDeclaration(Declaration):
+class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
 
 class ClassDeclaration(TypeDeclaration):

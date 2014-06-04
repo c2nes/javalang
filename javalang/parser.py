@@ -265,18 +265,19 @@ class Parser(object):
     def parse_compilation_unit(self):
         package = None
         package_annotations = None
+        javadoc = None
         import_declarations = list()
         type_declarations = list()
 
         self.tokens.push_marker()
-        if self.is_annotation():
-            package_annotations = self.parse_annotations()
+        _, package_annotations, javadoc = self.parse_modifiers()
 
         if self.try_accept('package'):
             self.tokens.pop_marker(False)
             package_name = self.parse_qualified_identifier()
             package = tree.PackageDeclaration(annotations=package_annotations,
-                                              name=package_name)
+                                              name=package_name,
+                                              documentation=javadoc)
             self.accept(';')
         else:
             self.tokens.pop_marker(True)
