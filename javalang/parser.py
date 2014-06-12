@@ -27,7 +27,7 @@ def parse_debug(method):
                 sep = ("-" * self.recursion_depth)
                 e_message = ""
 
-                print(("%s %s> %s(%s)" % (depth, sep, name, token)))
+                print("%s %s> %s(%s)" % (depth, sep, name, token))
 
                 self.recursion_depth += 1
 
@@ -44,8 +44,8 @@ def parse_debug(method):
 
                 finally:
                     token = six.text_type(self.tokens.last())
-                    print(("%s <%s %s(%s, %s) %s" % \
-                        (depth, sep, name, start_value, token, e_message)))
+                    print("%s <%s %s(%s, %s) %s" %
+                        (depth, sep, name, start_value, token, e_message))
                     self.recursion_depth -= 1
             else:
                 self.recursion_depth += 1
