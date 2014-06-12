@@ -127,7 +127,7 @@ class Parser(object):
             raise JavaParserError("Missing acceptable values")
 
         for accept in accepts:
-            token = six.next(self.tokens)
+            token = next(self.tokens)
             if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 self.illegal("Expected '%s'" % (accept,))
@@ -167,7 +167,7 @@ class Parser(object):
                 return False
 
         for i in range(0, len(accepts)):
-            six.next(self.tokens)
+            next(self.tokens)
 
         return True
 
@@ -2074,7 +2074,7 @@ class Parser(object):
             return tree.This()
 
         elif self.would_accept('.', '<'):
-            six.next(self.tokens)
+            next(self.tokens)
             return self.parse_explicit_generic_invocation()
 
         elif self.try_accept('.', 'new'):
