@@ -25,7 +25,7 @@ def parse_debug(method):
                 sep = ("-" * self.recursion_depth)
                 e_message = ""
 
-                print(("%s %s> %s(%s)" % (depth, sep, name, token)))
+                print("%s %s> %s(%s)" % (depth, sep, name, token))
 
                 self.recursion_depth += 1
 
@@ -42,8 +42,8 @@ def parse_debug(method):
 
                 finally:
                     token = six.text_type(self.tokens.last())
-                    print(("%s <%s %s(%s, %s) %s" % \
-                        (depth, sep, name, start_value, token, e_message)))
+                    print("%s <%s %s(%s, %s) %s" %
+                        (depth, sep, name, start_value, token, e_message))
                     self.recursion_depth -= 1
             else:
                 self.recursion_depth += 1
@@ -125,8 +125,8 @@ class Parser(object):
             raise JavaParserError("Missing acceptable values")
 
         for accept in accepts:
-            token = six.next(self.tokens)
-            if isinstance(accept, six.string_types[0]) and (
+            token = next(self.tokens)
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 self.illegal("Expected '%s'" % (accept,))
             elif isinstance(accept, type) and not isinstance(token, accept):
@@ -143,7 +143,7 @@ class Parser(object):
         for i, accept in enumerate(accepts):
             token = self.tokens.look(i)
 
-            if isinstance(accept, six.string_types[0]) and (
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 return False
             elif isinstance(accept, type) and not isinstance(token, accept):
@@ -158,14 +158,14 @@ class Parser(object):
         for i, accept in enumerate(accepts):
             token = self.tokens.look(i)
 
-            if isinstance(accept, six.string_types[0]) and (
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 return False
             elif isinstance(accept, type) and not isinstance(token, accept):
                 return False
 
         for i in range(0, len(accepts)):
-            six.next(self.tokens)
+            next(self.tokens)
 
         return True
 
@@ -2060,7 +2060,7 @@ class Parser(object):
             return tree.This()
 
         elif self.would_accept('.', '<'):
-            six.next(self.tokens)
+            next(self.tokens)
             return self.parse_explicit_generic_invocation()
 
         elif self.try_accept('.', 'new'):

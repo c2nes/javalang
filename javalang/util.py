@@ -1,4 +1,3 @@
-import six
 
 
 class LookAheadIterator(object):
@@ -22,7 +21,7 @@ class LookAheadIterator(object):
         if self.look_ahead:
             self.value = self.look_ahead.pop(0)
         else:
-            self.value = six.next(self.iterable)
+            self.value = next(self.iterable)
 
         if self.markers:
             self.markers[-1].append(self.value)
@@ -42,7 +41,7 @@ class LookAheadIterator(object):
 
         if length <= i:
             try:
-                self.look_ahead.extend([six.next(self.iterable)
+                self.look_ahead.extend([next(self.iterable)
                     for _ in range(length, i + 1)])
             except StopIteration:
                 return self.default

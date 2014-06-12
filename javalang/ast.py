@@ -1,4 +1,4 @@
-import pickle as pickle
+import pickle
 
 import six
 
