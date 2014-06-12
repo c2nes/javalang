@@ -128,7 +128,7 @@ class Parser(object):
 
         for accept in accepts:
             token = six.next(self.tokens)
-            if isinstance(accept, six.string_types[0]) and (
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 self.illegal("Expected '%s'" % (accept,))
             elif isinstance(accept, type) and not isinstance(token, accept):
@@ -145,7 +145,7 @@ class Parser(object):
         for i, accept in enumerate(accepts):
             token = self.tokens.look(i)
 
-            if isinstance(accept, six.string_types[0]) and (
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 return False
             elif isinstance(accept, type) and not isinstance(token, accept):
@@ -160,7 +160,7 @@ class Parser(object):
         for i, accept in enumerate(accepts):
             token = self.tokens.look(i)
 
-            if isinstance(accept, six.string_types[0]) and (
+            if isinstance(accept, six.string_types) and (
                     not token.value == accept):
                 return False
             elif isinstance(accept, type) and not isinstance(token, accept):
