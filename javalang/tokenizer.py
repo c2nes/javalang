@@ -392,7 +392,7 @@ class JavaTokenizer(object):
         codecs = ['utf_8', 'iso-8859-1']
 
         # If data is already unicode don't try to redecode
-        if isinstance(self.data, type(six.text_type())):
+        if isinstance(self.data, six.text_type):
             return self.data
 
         for codec in codecs:
