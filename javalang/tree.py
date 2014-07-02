@@ -30,7 +30,7 @@ class TypeDeclaration(Declaration, Documented):
     def constructors(self):
         return [decl for decl in self.body if isinstance(decl, ConstructorDeclaration)]
 
-class PackageDeclaration(Declaration):
+class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
 
 class ClassDeclaration(TypeDeclaration):
