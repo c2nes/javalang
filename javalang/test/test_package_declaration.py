@@ -1,9 +1,8 @@
 import unittest
-import os, sys
-lib_path = os.path.abspath('../')
-sys.path.insert(0, lib_path)
 
-import javalang
+from pkg_resources import resource_string
+from .. import parse
+
 
 # From my reading of the spec (http://docs.oracle.com/javase/specs/jls/se7/html/jls-7.html) the
 # allowed order is javadoc, optional annotation, package declaration
@@ -15,7 +14,7 @@ class PackageInfo(unittest.TestCase):
         self.failUnless(ast.package.name == "org.javalang.test")
         self.failIf(ast.package.annotations)
         self.failIf(ast.package.documentation)
-        
+
     def testAnnotationOnly(self):
         source_file = "source/package-info/AnnotationOnly.java"
         ast = self.get_ast(source_file)
@@ -49,11 +48,8 @@ class PackageInfo(unittest.TestCase):
         self.failUnless(ast.package.documentation)
 
     def get_ast(self, filename):
-        f = open(filename)
-        source = f.read()
-        f.close()
-
-        ast = javalang.parse.parse(source)
+        source = resource_string(__name__, filename)
+        ast = parse.parse(source)
 
         return ast
 
