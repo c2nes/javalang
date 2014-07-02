@@ -270,7 +270,12 @@ class Parser(object):
         type_declarations = list()
 
         self.tokens.push_marker()
-        _, package_annotations, javadoc = self.parse_modifiers()
+        next_token = self.tokens.look()
+        if next_token:
+            javadoc = next_token.javadoc
+
+        if self.is_annotation():
+            package_annotations = self.parse_annotations()
 
         if self.try_accept('package'):
             self.tokens.pop_marker(False)
