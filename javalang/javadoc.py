@@ -71,7 +71,7 @@ def _get_indent_level(s):
     return len(s) - len(s.lstrip())
 
 def _left_justify(s):
-    lines = s.splitlines()
+    lines = s.rstrip().splitlines()
 
     if not lines:
         return ''
