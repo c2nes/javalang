@@ -195,6 +195,9 @@ class BinaryOperation(Expression):
 class Cast(Expression):
     attrs = ("type", "expression")
 
+class ExpressionWithMemberReference(Expression):
+    attrs = ("expression", "method_reference")
+
 # ------------------------------------------------------------------------------
 
 class Primary(Expression):

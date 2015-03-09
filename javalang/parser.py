@@ -4,7 +4,7 @@ from . import util
 from . import tree
 from .tokenizer import (
     EndOfInput, Keyword, Modifier, BasicType, Identifier,
-    Annotation, Literal, Operator, JavaToken
+    Annotation, Literal, Operator, JavaToken, MethodReference
     )
 
 ENABLE_DEBUG_SUPPORT = False
@@ -1731,7 +1731,11 @@ class Parser(object):
             return tree.TernaryExpression(condition=expression_2,
                                           if_true=true_expression,
                                           if_false=false_expression)
-
+        if self.try_accept('::'):
+            method_reference_expression = self.parse_expression()
+            return tree.ExpressionWithMemberReference(
+                expression=expression_2,
+                method_reference=method_reference_expression)
         return expression_2
 
     @parse_debug

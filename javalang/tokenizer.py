@@ -128,6 +128,11 @@ class Operator(JavaToken):
     def is_assignment(self):
         return self.value in self.ASSIGNMENT
 
+
+class MethodReference(JavaToken):
+    MAX_LEN = 2
+    VALUES = ['::',]
+
 class Annotation(JavaToken):
     pass
 
@@ -524,6 +529,9 @@ class JavaTokenizer(object):
                 # of moving try_operator higher in the chain because operators
                 # aren't as common and try_operator is expensive
                 token_type = Operator
+            elif c == ':' and c_next == ':':
+                token_type = MethodReference
+                self.j = self.i + 2
 
             elif c == '@':
                 token_type = Annotation
