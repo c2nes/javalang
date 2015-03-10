@@ -87,6 +87,42 @@ public class Lambda {
             parse.parse(self._class_template("(x, final y) -> x+y;"))
 
 
+class MethodReferenceSyntaxTest(unittest.TestCase):
+    """ Contains tests for java 8 method reference syntax. """
+
+    def _class_template(self, content_to_add):
+        """ returns an example java class with the
+            given content_to_add contained within a method.
+        """
+        template = """
+public class Lambda {
+
+    public static void main(String args[]) {
+        %s
+    }
+}
+        """
+        return template % content_to_add
+
+    def test_method_reference(self):
+        """ tests that method references are supported. """
+        parse.parse(self._class_template("String::length;"))
+
+    @unittest.expectedFailure
+    def test_method_reference_explicit_type_arguments_for_generic_type(self):
+        """ currently there is no support for method references
+            to an explicit type.
+        """
+        parse.parse(self._class_template("List<String>::size;"))
+
+    @unittest.expectedFailure
+    def test_method_reference_explicit_type_arguments(self):
+        """ currently there is no support for method references
+            to an explicit type.
+        """
+        parse.parse(self._class_template("Arrays::<String> sort;"))
+
+
 def main():
     unittest.main()
 
