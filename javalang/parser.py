@@ -1744,9 +1744,16 @@ class Parser(object):
             body = self.parse_lambda_method_body()
             return tree.LambdaExpression(parameters=[expression_2],
                                          body=body)
-
         if self.try_accept('::'):
-            method_reference_expression = self.parse_expression()
+            if self.would_accept('<'):
+                self.accept('<')
+                type_v = self.parse_type()
+                self.accept('>')
+                expression = self.parse_expression()
+                method_reference_expression = tree.Cast(
+                    type=type_v, expression=expression)
+            else:
+                method_reference_expression = self.parse_expression()
             return tree.ExpressionWithMemberReference(
                 expression=expression_2,
                 method_reference=method_reference_expression)

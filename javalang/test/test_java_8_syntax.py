@@ -116,10 +116,8 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         """
         parse.parse(setup_java_class("List<String>::size;"))
 
-    @unittest.expectedFailure
     def test_method_reference_explicit_type_arguments(self):
-        """ currently there is no support for method references
-            to an explicit type.
+        """ test support for method references with an explicit type.
         """
         parse.parse(setup_java_class("Arrays::<String> sort;"))
 
