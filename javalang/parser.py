@@ -854,6 +854,15 @@ class Parser(object):
         return tree.FieldDeclaration(declarators=declarators)
 
     @parse_debug
+    def parse_lambda_method_body(self):
+        body = None
+        if self.try_accept('->'):
+            if self.would_accept('{'):
+                return self.parse_block()
+            else:
+                return self.parse_expression()
+
+    @parse_debug
     def parse_method_declarator_rest(self):
         formal_parameters = self.parse_formal_parameters()
         additional_dimensions = self.parse_array_dimension()
@@ -1731,6 +1740,11 @@ class Parser(object):
             return tree.TernaryExpression(condition=expression_2,
                                           if_true=true_expression,
                                           if_false=false_expression)
+        if self.would_accept('->'):
+            body = self.parse_lambda_method_body()
+            return tree.LambdaExpression(parameters=[expression_2],
+                                         body=body)
+
         if self.try_accept('::'):
             method_reference_expression = self.parse_expression()
             return tree.ExpressionWithMemberReference(
@@ -1773,7 +1787,13 @@ class Parser(object):
     @parse_debug
     def parse_expression_3(self):
         prefix_operators = list()
-
+        if self.would_accept('('):
+            try:
+                lambda_exp = self.parse_lambda_expression()
+                if lambda_exp:
+                    return lambda_exp
+            except JavaSyntaxError:
+                pass
         while self.tokens.look().value in Operator.PREFIX:
             prefix_operators.append(self.tokens.next().value)
 
@@ -1807,6 +1827,17 @@ class Parser(object):
             token = self.tokens.look()
 
         return primary
+
+    @parse_debug
+    def parse_lambda_expression(self):
+        lambda_expr = None
+        with self.tokens:
+            if self.would_accept('('):
+                formal_parameters = self.parse_formal_parameters()
+                body = self.parse_lambda_method_body()
+                return tree.LambdaExpression(parameters=formal_parameters,
+                                         body=body)
+            raise JavaSyntaxError('Not a lambda expression.')
 
     @parse_debug
     def parse_infix_operator(self):

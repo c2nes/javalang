@@ -98,7 +98,7 @@ class Operator(JavaToken):
     VALUES = set(['>>>=', '>>=', '<<=',  '%=', '^=', '|=', '&=', '/=',
                   '*=', '-=', '+=', '<<', '--', '++', '||', '&&', '!=',
                   '>=', '<=', '==', '%', '^', '|', '&', '/', '*', '-',
-                  '+', ':', '?', '~', '!', '<', '>', '=', '...'])
+                  '+', ':', '?', '~', '!', '<', '>', '=', '...', '->'])
 
     # '>>>' and '>>' are excluded so that >> becomes two tokens and >>> becomes
     # three. This is done because we can not distinguish the operators >> and
@@ -116,6 +116,8 @@ class Operator(JavaToken):
     ASSIGNMENT = set(['=', '+=', '-=', '*=', '/=', '&=', '|=', '^=', '%=',
                       '<<=', '>>=', '>>>='])
 
+    LAMBDA = set(['->'])
+
     def is_infix(self):
         return self.value in self.INFIX
 
@@ -128,6 +130,9 @@ class Operator(JavaToken):
     def is_assignment(self):
         return self.value in self.ASSIGNMENT
 
+    def is_lambda(self):
+        return self.value in self.LAMBDA
+
 
 class MethodReference(JavaToken):
     MAX_LEN = 2
@@ -138,6 +143,11 @@ class Annotation(JavaToken):
 
 class Identifier(JavaToken):
     pass
+
+class LambdaSymbol(JavaToken):
+    MAX_LEN = 2
+    value = ['->',]
+
 
 class JavaTokenizer(object):
 

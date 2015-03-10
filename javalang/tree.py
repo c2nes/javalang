@@ -198,6 +198,9 @@ class Cast(Expression):
 class ExpressionWithMemberReference(Expression):
     attrs = ("expression", "method_reference")
 
+class LambdaExpression(Expression):
+    attrs = ('parameters', 'body')
+
 # ------------------------------------------------------------------------------
 
 class Primary(Expression):
