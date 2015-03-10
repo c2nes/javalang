@@ -22,20 +22,6 @@ public class Lambda {
 class LambdaSupportTest(unittest.TestCase):
     """ Contains tests for java 8 lambda syntax. """
 
-    def _class_template(self, content_to_add):
-        """ returns an example java class with the
-            given content_to_add contained within a method.
-        """
-        template = """
-public class Lambda {
-
-    public static void main(String args[]) {
-        %s
-    }
-}
-        """
-        return template % content_to_add
-
     def test_lambda_support_no_parameters_no_body(self):
         """ tests support for lambda with no parameters and no body. """
         parse.parse(setup_java_class("() -> {};"))
