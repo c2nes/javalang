@@ -109,6 +109,9 @@ class VariableDeclarator(Node):
 class FormalParameter(Declaration):
     attrs = ("type", "name", "varargs")
 
+class InferredFormalParameter(Node):
+    attrs = ('name',)
+
 # ------------------------------------------------------------------------------
 
 class Statement(Node):

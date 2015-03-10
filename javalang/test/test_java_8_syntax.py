@@ -66,12 +66,11 @@ class LambdaSupportTest(unittest.TestCase):
         parse.parse(setup_java_class("(String foo, String bar) -> "
                                      "foo + bar;"))
 
-    @unittest.expectedFailure
     def test_parameters_with_no_type_expression_body(self):
-        """ currently there is no support for multiple lambda parameters
+        """ tests support for multiple lambda parameters
             that are specified without their types.
         """
-        parse.parse(setup_java_class("(x, y) -> x+y;"))
+        parse.parse(setup_java_class("(x, y) -> x + y;"))
 
     def test_parameters_with_mixed_inferred_and_declared_types(self):
         """ this tests that lambda type specification mixing is considered
