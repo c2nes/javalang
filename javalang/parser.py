@@ -1831,21 +1831,19 @@ class Parser(object):
         lambda_expr = None
         parameters = None
         with self.tokens:
-            if self.would_accept('('):
-                if self.tokens.look(i=2).value == ',':
-                    self.accept('(')
-                    parameters = []
-                    while not self.would_accept(')'):
-                        parameters.append(tree.InferredFormalParameter(
-                            name=self.parse_identifier()))
-                        self.try_accept(',')
-                    self.accept(')')
-                else:
-                    parameters = self.parse_formal_parameters()
-                body = self.parse_lambda_method_body()
-                return tree.LambdaExpression(parameters=parameters,
-                                         body=body)
-            raise JavaSyntaxError('Not a lambda expression.')
+            if self.would_accept('(', Identifier, ','):
+                self.accept('(')
+                parameters = []
+                while not self.would_accept(')'):
+                    parameters.append(tree.InferredFormalParameter(
+                        name=self.parse_identifier()))
+                    self.try_accept(',')
+                self.accept(')')
+            else:
+                parameters = self.parse_formal_parameters()
+            body = self.parse_lambda_method_body()
+            return tree.LambdaExpression(parameters=parameters,
+                                     body=body)
 
     @parse_debug
     def parse_lambda_method_body(self):
