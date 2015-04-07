@@ -86,6 +86,13 @@ class LambdaSupportTest(unittest.TestCase):
         with self.assertRaises(parser.JavaSyntaxError):
             parse.parse(setup_java_class("(x, final y) -> x+y;"))
 
+    def test_invalid_parameters_are_invalid(self):
+        """ this tests that invalid lambda parameters are are
+            considered invalid as per the specifications.
+        """
+        with self.assertRaises(parser.JavaSyntaxError):
+            parse.parse(setup_java_class("(a b c) -> {};"))
+
 
 class MethodReferenceSyntaxTest(unittest.TestCase):
     """ Contains tests for java 8 method reference syntax. """
