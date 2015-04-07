@@ -130,9 +130,6 @@ class Operator(JavaToken):
     def is_assignment(self):
         return self.value in self.ASSIGNMENT
 
-    def is_lambda(self):
-        return self.value in self.LAMBDA
-
 
 class MethodReference(JavaToken):
     MAX_LEN = 2
