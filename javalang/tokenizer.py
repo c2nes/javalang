@@ -141,10 +141,6 @@ class Annotation(JavaToken):
 class Identifier(JavaToken):
     pass
 
-class LambdaSymbol(JavaToken):
-    MAX_LEN = 2
-    value = ['->',]
-
 
 class JavaTokenizer(object):
 
