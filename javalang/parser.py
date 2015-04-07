@@ -854,15 +854,6 @@ class Parser(object):
         return tree.FieldDeclaration(declarators=declarators)
 
     @parse_debug
-    def parse_lambda_method_body(self):
-        body = None
-        if self.try_accept('->'):
-            if self.would_accept('{'):
-                return self.parse_block()
-            else:
-                return self.parse_expression()
-
-    @parse_debug
     def parse_method_declarator_rest(self):
         formal_parameters = self.parse_formal_parameters()
         additional_dimensions = self.parse_array_dimension()
@@ -1855,6 +1846,15 @@ class Parser(object):
                 return tree.LambdaExpression(parameters=parameters,
                                          body=body)
             raise JavaSyntaxError('Not a lambda expression.')
+
+    @parse_debug
+    def parse_lambda_method_body(self):
+        body = None
+        if self.try_accept('->'):
+            if self.would_accept('{'):
+                return self.parse_block()
+            else:
+                return self.parse_expression()
 
     @parse_debug
     def parse_infix_operator(self):
