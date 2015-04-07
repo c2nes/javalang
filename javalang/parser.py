@@ -4,7 +4,7 @@ from . import util
 from . import tree
 from .tokenizer import (
     EndOfInput, Keyword, Modifier, BasicType, Identifier,
-    Annotation, Literal, Operator, JavaToken, MethodReference
+    Annotation, Literal, Operator, JavaToken,
     )
 
 ENABLE_DEBUG_SUPPORT = False
