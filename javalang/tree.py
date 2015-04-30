@@ -198,8 +198,8 @@ class BinaryOperation(Expression):
 class Cast(Expression):
     attrs = ("type", "expression")
 
-class ExpressionWithMemberReference(Expression):
-    attrs = ("expression", "method_reference")
+class MethodReference(Expression):
+    attrs = ("expression", "method", "type_arguments")
 
 class LambdaExpression(Expression):
     attrs = ('parameters', 'body')

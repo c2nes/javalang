@@ -94,6 +94,10 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         """ tests that method references are supported. """
         parse.parse(setup_java_class("String::length;"))
 
+    def test_method_reference_to_the_new_method(self):
+        """ test support for method references to 'new'. """
+        parse.parse(setup_java_class("String::new;"))
+
     @unittest.expectedFailure
     def test_method_reference_explicit_type_arguments_for_generic_type(self):
         """ currently there is no support for method references
