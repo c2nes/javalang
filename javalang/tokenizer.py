@@ -98,7 +98,7 @@ class Operator(JavaToken):
     VALUES = set(['>>>=', '>>=', '<<=',  '%=', '^=', '|=', '&=', '/=',
                   '*=', '-=', '+=', '<<', '--', '++', '||', '&&', '!=',
                   '>=', '<=', '==', '%', '^', '|', '&', '/', '*', '-',
-                  '+', ':', '?', '~', '!', '<', '>', '=', '...', '->'])
+                  '+', ':', '?', '~', '!', '<', '>', '=', '...', '->', '::'])
 
     # '>>>' and '>>' are excluded so that >> becomes two tokens and >>> becomes
     # three. This is done because we can not distinguish the operators >> and
@@ -118,6 +118,8 @@ class Operator(JavaToken):
 
     LAMBDA = set(['->'])
 
+    METHOD_REFERENCE = set(['::',])
+
     def is_infix(self):
         return self.value in self.INFIX
 
@@ -130,23 +132,12 @@ class Operator(JavaToken):
     def is_assignment(self):
         return self.value in self.ASSIGNMENT
 
-    def is_lambda(self):
-        return self.value in self.LAMBDA
-
-
-class MethodReference(JavaToken):
-    MAX_LEN = 2
-    VALUES = ['::',]
 
 class Annotation(JavaToken):
     pass
 
 class Identifier(JavaToken):
     pass
-
-class LambdaSymbol(JavaToken):
-    MAX_LEN = 2
-    value = ['->',]
 
 
 class JavaTokenizer(object):
@@ -539,9 +530,6 @@ class JavaTokenizer(object):
                 # of moving try_operator higher in the chain because operators
                 # aren't as common and try_operator is expensive
                 token_type = Operator
-            elif c == ':' and c_next == ':':
-                token_type = MethodReference
-                self.j = self.i + 2
 
             elif c == '@':
                 token_type = Annotation

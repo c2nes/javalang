@@ -4,7 +4,7 @@ from . import util
 from . import tree
 from .tokenizer import (
     EndOfInput, Keyword, Modifier, BasicType, Identifier,
-    Annotation, Literal, Operator, JavaToken, MethodReference
+    Annotation, Literal, Operator, JavaToken,
     )
 
 ENABLE_DEBUG_SUPPORT = False
@@ -852,15 +852,6 @@ class Parser(object):
             declarators.append(declarator)
 
         return tree.FieldDeclaration(declarators=declarators)
-
-    @parse_debug
-    def parse_lambda_method_body(self):
-        body = None
-        if self.try_accept('->'):
-            if self.would_accept('{'):
-                return self.parse_block()
-            else:
-                return self.parse_expression()
 
     @parse_debug
     def parse_method_declarator_rest(self):
@@ -1844,21 +1835,27 @@ class Parser(object):
         lambda_expr = None
         parameters = None
         with self.tokens:
-            if self.would_accept('('):
-                if self.tokens.look(i=2).value == ',':
-                    self.accept('(')
-                    parameters = []
-                    while not self.would_accept(')'):
-                        parameters.append(tree.InferredFormalParameter(
-                            name=self.parse_identifier()))
-                        self.try_accept(',')
-                    self.accept(')')
-                else:
-                    parameters = self.parse_formal_parameters()
-                body = self.parse_lambda_method_body()
-                return tree.LambdaExpression(parameters=parameters,
-                                         body=body)
-            raise JavaSyntaxError('Not a lambda expression.')
+            if self.would_accept('(', Identifier, ','):
+                self.accept('(')
+                parameters = []
+                while not self.would_accept(')'):
+                    parameters.append(tree.InferredFormalParameter(
+                        name=self.parse_identifier()))
+                    self.try_accept(',')
+                self.accept(')')
+            else:
+                parameters = self.parse_formal_parameters()
+            body = self.parse_lambda_method_body()
+            return tree.LambdaExpression(parameters=parameters,
+                                     body=body)
+
+    @parse_debug
+    def parse_lambda_method_body(self):
+        if self.try_accept('->'):
+            if self.would_accept('{'):
+                return self.parse_block()
+            else:
+                return self.parse_expression()
 
     @parse_debug
     def parse_infix_operator(self):
