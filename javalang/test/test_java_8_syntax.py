@@ -191,6 +191,13 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         self.assert_contains_method_reference_expression_in_m(
             parse.parse(setup_java_class("Arrays::<String> sort;")))
 
+    @unittest.expectedFailure
+    def test_method_reference_from_array_type(self):
+        """ currently there is no support for method references
+            from a primary type.
+        """
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("int[]::new;")))
 
 
 def main():
