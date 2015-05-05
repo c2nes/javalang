@@ -35,7 +35,7 @@ class LambdaSupportTest(unittest.TestCase):
 
     def assert_contains_lambda_expression_in_m(
             self, clazz, method_name='main'):
-        """ asserts that the given tree contains a method with the supplied
+        """ asserts that the given class contains a method with the supplied
             method name containing a lambda expression.
         """
         matches = list(filter_type_in_method(
