@@ -1892,6 +1892,9 @@ class Parser(object):
 
             return tree.This()
 
+        elif self.would_accept('super', '::'):
+            self.accept('super')
+            return token
         elif self.try_accept('super'):
             super_suffix = self.parse_super_suffix()
             return super_suffix
