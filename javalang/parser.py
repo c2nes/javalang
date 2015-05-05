@@ -1849,7 +1849,7 @@ class Parser(object):
 
     @parse_debug
     def parse_lambda_method_body(self):
-        if self.try_accept('->'):
+        if self.accept('->'):
             if self.would_accept('{'):
                 return self.parse_block()
             else:
