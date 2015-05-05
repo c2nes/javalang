@@ -1784,12 +1784,13 @@ class Parser(object):
         if self.would_accept('('):
             try:
                 with self.tokens:
-                    try:
                         lambda_exp = self.parse_lambda_expression()
                         if lambda_exp:
                             return lambda_exp
-                    except JavaSyntaxError:
-                        pass
+            except JavaSyntaxError:
+                pass
+            try:
+                with self.tokens:
                     self.accept('(')
                     cast_target = self.parse_type()
                     self.accept(')')
