@@ -1,7 +1,7 @@
 import unittest
 
 from pkg_resources import resource_string
-from .. import parse, parser
+from .. import parse, parser, tree
 
 
 def setup_java_class(content_to_add):
@@ -21,6 +21,20 @@ public class Lambda {
 
 class LambdaSupportTest(unittest.TestCase):
     """ Contains tests for java 8 lambda syntax. """
+
+    def assert_contains_lambda_expression_in_m(
+            self, clazz, method_name='main'):
+        """ asserts that the given tree contains a method with the supplied
+            method name containing a lambda expression.
+        """
+        if not clazz.children:
+            self.fail('No class found.')
+        for path, node in clazz.filter(tree.LambdaExpression):
+            for p in reversed(path):
+                if isinstance(p, tree.MethodDeclaration):
+                    self.assertEqual(p.name, method_name)
+                    return node, path
+        self.fail()
 
     def test_lambda_support_no_parameters_no_body(self):
         """ tests support for lambda with no parameters and no body. """
@@ -52,10 +66,15 @@ class LambdaSupportTest(unittest.TestCase):
 
     def test_parameter_no_type_expression_body(self):
         """ tests support for lambda with parameters with inferred types. """
-        parse.parse(setup_java_class("(bar) -> bar + 1;"))
-        parse.parse(setup_java_class("bar -> bar + 1;"))
-        parse.parse(setup_java_class("x -> x.length();"))
-        parse.parse(setup_java_class("y -> { y.boom(); };"))
+        test_classes = [
+            setup_java_class("(bar) -> bar + 1;"),
+            setup_java_class("bar -> bar + 1;"),
+            setup_java_class("x -> x.length();"),
+            setup_java_class("y -> { y.boom(); };"),
+        ]
+        for test_class in test_classes:
+            clazz = parse.parse(test_class)
+            self.assert_contains_lambda_expression_in_m(clazz)
 
     def test_parameter_with_type_expression_body(self):
         """ tests support for lambda with parameters with formal types. """
