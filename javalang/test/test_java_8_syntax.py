@@ -134,6 +134,10 @@ class LambdaSupportTest(unittest.TestCase):
         with self.assertRaises(parser.JavaSyntaxError):
             parse.parse(setup_java_class("(a b c) -> {};"))
 
+    def test_cast_works(self):
+        """ this tests that a cast expression works as expected. """
+        parse.parse(setup_java_class("String x = (String) A.x() ;"))
+
 
 class MethodReferenceSyntaxTest(unittest.TestCase):
 
