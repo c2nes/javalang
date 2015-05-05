@@ -1778,19 +1778,18 @@ class Parser(object):
     @parse_debug
     def parse_expression_3(self):
         prefix_operators = list()
-        if self.would_accept('('):
-            try:
-                lambda_exp = self.parse_lambda_expression()
-                if lambda_exp:
-                    return lambda_exp
-            except JavaSyntaxError:
-                pass
         while self.tokens.look().value in Operator.PREFIX:
             prefix_operators.append(self.tokens.next().value)
 
         if self.would_accept('('):
             try:
                 with self.tokens:
+                    try:
+                        lambda_exp = self.parse_lambda_expression()
+                        if lambda_exp:
+                            return lambda_exp
+                    except JavaSyntaxError:
+                        pass
                     self.accept('(')
                     cast_target = self.parse_type()
                     self.accept(')')
@@ -1834,19 +1833,18 @@ class Parser(object):
     def parse_lambda_expression(self):
         lambda_expr = None
         parameters = None
-        with self.tokens:
-            if self.would_accept('(', Identifier, ','):
-                self.accept('(')
-                parameters = []
-                while not self.would_accept(')'):
-                    parameters.append(tree.InferredFormalParameter(
-                        name=self.parse_identifier()))
-                    self.try_accept(',')
-                self.accept(')')
-            else:
-                parameters = self.parse_formal_parameters()
-            body = self.parse_lambda_method_body()
-            return tree.LambdaExpression(parameters=parameters,
+        if self.would_accept('(', Identifier, ','):
+            self.accept('(')
+            parameters = []
+            while not self.would_accept(')'):
+                parameters.append(tree.InferredFormalParameter(
+                    name=self.parse_identifier()))
+                self.try_accept(',')
+            self.accept(')')
+        else:
+            parameters = self.parse_formal_parameters()
+        body = self.parse_lambda_method_body()
+        return tree.LambdaExpression(parameters=parameters,
                                      body=body)
 
     @parse_debug
