@@ -160,6 +160,13 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         self.assert_contains_method_reference_expression_in_m(
             parse.parse(setup_java_class("String::new;")))
 
+    def test_method_reference_to_the_new_method_with_explict_type(self):
+        """ test support for method references to 'new' with an
+            explicit type.
+        """
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("String::<String> new;")))
+
     def test_method_reference_from_super(self):
         """ test support for method references from 'super'. """
         self.assert_contains_method_reference_expression_in_m(
