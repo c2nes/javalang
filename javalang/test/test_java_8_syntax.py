@@ -38,16 +38,22 @@ class LambdaSupportTest(unittest.TestCase):
 
     def test_lambda_support_no_parameters_no_body(self):
         """ tests support for lambda with no parameters and no body. """
-        parse.parse(setup_java_class("() -> {};"))
+        self.assert_contains_lambda_expression_in_m(
+            parse.parse(setup_java_class("() -> {};")))
 
     def test_lambda_support_no_parameters_expression_body(self):
         """ tests support for lambda with no parameters and an
             expression body.
         """
-        parse.parse(setup_java_class("() -> 3;"))
-        parse.parse(setup_java_class("() -> null;"))
-        parse.parse(setup_java_class("() -> { return 21; };"))
-        parse.parse(setup_java_class("() -> { System.exit(1); };"))
+        test_classes = [
+            setup_java_class("() -> 3;"),
+            setup_java_class("() -> null;"),
+            setup_java_class("() -> { return 21; };"),
+            setup_java_class("() -> { System.exit(1); };"),
+        ]
+        for test_class in test_classes:
+            clazz = parse.parse(test_class)
+            self.assert_contains_lambda_expression_in_m(clazz)
 
     def test_lambda_support_no_parameters_complex_expression(self):
         """ tests support for lambda with no parameters and a
@@ -62,7 +68,8 @@ class LambdaSupportTest(unittest.TestCase):
                 return result / 2;
             }
         };"""
-        parse.parse(setup_java_class(code))
+        self.assert_contains_lambda_expression_in_m(
+            parse.parse(setup_java_class(code)))
 
     def test_parameter_no_type_expression_body(self):
         """ tests support for lambda with parameters with inferred types. """
@@ -78,18 +85,24 @@ class LambdaSupportTest(unittest.TestCase):
 
     def test_parameter_with_type_expression_body(self):
         """ tests support for lambda with parameters with formal types. """
-        parse.parse(setup_java_class("(int foo) -> { return foo + 2; };"))
-        parse.parse(setup_java_class("(String s) -> s.length();"))
-        parse.parse(setup_java_class("(int foo) -> foo + 1;"))
-        parse.parse(setup_java_class("(Thread th) -> { th.start(); };"))
-        parse.parse(setup_java_class("(String foo, String bar) -> "
-                                     "foo + bar;"))
+        test_classes = [
+            setup_java_class("(int foo) -> { return foo + 2; };"),
+            setup_java_class("(String s) -> s.length();"),
+            setup_java_class("(int foo) -> foo + 1;"),
+            setup_java_class("(Thread th) -> { th.start(); };"),
+            setup_java_class("(String foo, String bar) -> "
+                             "foo + bar;"),
+        ]
+        for test_class in test_classes:
+            clazz = parse.parse(test_class)
+            self.assert_contains_lambda_expression_in_m(clazz)
 
     def test_parameters_with_no_type_expression_body(self):
         """ tests support for multiple lambda parameters
             that are specified without their types.
         """
-        parse.parse(setup_java_class("(x, y) -> x + y;"))
+        self.assert_contains_lambda_expression_in_m(
+            parse.parse(setup_java_class("(x, y) -> x + y;")))
 
     def test_parameters_with_mixed_inferred_and_declared_types(self):
         """ this tests that lambda type specification mixing is considered
