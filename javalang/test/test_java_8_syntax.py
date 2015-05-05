@@ -19,6 +19,17 @@ public class Lambda {
     return template % content_to_add
 
 
+def filter_type_in_method(clazz, the_type, method_name):
+    """ yields the result of filtering the given class for the given
+        type inside the given method identified by its name.
+    """
+    for path, node in clazz.filter(the_type):
+        for p in reversed(path):
+            if isinstance(p, tree.MethodDeclaration):
+                if p.name == method_name:
+                    yield path, node
+
+
 class LambdaSupportTest(unittest.TestCase):
     """ Contains tests for java 8 lambda syntax. """
 
@@ -27,14 +38,11 @@ class LambdaSupportTest(unittest.TestCase):
         """ asserts that the given tree contains a method with the supplied
             method name containing a lambda expression.
         """
-        if not clazz.children:
-            self.fail('No class found.')
-        for path, node in clazz.filter(tree.LambdaExpression):
-            for p in reversed(path):
-                if isinstance(p, tree.MethodDeclaration):
-                    self.assertEqual(p.name, method_name)
-                    return node, path
-        self.fail('No lambda expression found.')
+        matches = list(filter_type_in_method(
+            clazz, tree.LambdaExpression, method_name))
+        if not matches:
+            self.fail('No matching lambda expression found.')
+        return matches
 
     def test_lambda_support_no_parameters_no_body(self):
         """ tests support for lambda with no parameters and no body. """
