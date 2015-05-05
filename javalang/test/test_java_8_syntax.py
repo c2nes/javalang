@@ -34,7 +34,7 @@ class LambdaSupportTest(unittest.TestCase):
                 if isinstance(p, tree.MethodDeclaration):
                     self.assertEqual(p.name, method_name)
                     return node, path
-        self.fail()
+        self.fail('No lambda expression found.')
 
     def test_lambda_support_no_parameters_no_body(self):
         """ tests support for lambda with no parameters and no body. """
