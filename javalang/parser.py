@@ -1891,7 +1891,6 @@ class Parser(object):
                 return tree.ExplicitConstructorInvocation(arguments=arguments)
 
             return tree.This()
-
         elif self.would_accept('super', '::'):
             self.accept('super')
             return token
@@ -2189,7 +2188,9 @@ class Parser(object):
                                                  arguments=arguments)
                 else:
                     return tree.MemberReference(member=identifier)
-
+            elif self.would_accept('super', '::'):
+                self.accept('super')
+                return token
             elif self.would_accept('<'):
                 return self.parse_explicit_generic_invocation()
             elif self.try_accept('this'):
