@@ -31,11 +31,12 @@ def filter_type_in_method(clazz, the_type, method_name):
 
 
 class LambdaSupportTest(unittest.TestCase):
+
     """ Contains tests for java 8 lambda syntax. """
 
     def assert_contains_lambda_expression_in_m(
             self, clazz, method_name='main'):
-        """ asserts that the given class contains a method with the supplied
+        """ asserts that the given tree contains a method with the supplied
             method name containing a lambda expression.
         """
         matches = list(filter_type_in_method(
@@ -135,27 +136,43 @@ class LambdaSupportTest(unittest.TestCase):
 
 
 class MethodReferenceSyntaxTest(unittest.TestCase):
+
     """ Contains tests for java 8 method reference syntax. """
+
+    def assert_contains_method_reference_expression_in_m(
+            self, clazz, method_name='main'):
+        """ asserts that the given class contains a method with the supplied
+            method name containing a method reference.
+        """
+        matches = list(filter_type_in_method(
+            clazz, tree.MethodReference, method_name))
+        if not matches:
+            self.fail('No matching method reference found.')
+        return matches
 
     def test_method_reference(self):
         """ tests that method references are supported. """
-        parse.parse(setup_java_class("String::length;"))
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("String::length;")))
 
     def test_method_reference_to_the_new_method(self):
         """ test support for method references to 'new'. """
-        parse.parse(setup_java_class("String::new;"))
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("String::new;")))
 
     @unittest.expectedFailure
     def test_method_reference_explicit_type_arguments_for_generic_type(self):
         """ currently there is no support for method references
             to an explicit type.
         """
-        parse.parse(setup_java_class("List<String>::size;"))
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("List<String>::size;")))
 
     def test_method_reference_explicit_type_arguments(self):
         """ test support for method references with an explicit type.
         """
-        parse.parse(setup_java_class("Arrays::<String> sort;"))
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("Arrays::<String> sort;")))
 
 
 def main():
