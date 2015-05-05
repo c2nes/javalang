@@ -165,6 +165,11 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         self.assert_contains_method_reference_expression_in_m(
             parse.parse(setup_java_class("super::toString;")))
 
+    def test_method_reference_from_super_with_identifier(self):
+        """ test support for method references from Identifier.super. """
+        self.assert_contains_method_reference_expression_in_m(
+            parse.parse(setup_java_class("String.super::toString;")))
+
     @unittest.expectedFailure
     def test_method_reference_explicit_type_arguments_for_generic_type(self):
         """ currently there is no support for method references
