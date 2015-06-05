@@ -4,7 +4,7 @@ from . import util
 from . import tree
 from .tokenizer import (
     EndOfInput, Keyword, Modifier, BasicType, Identifier,
-    Annotation, Literal, Operator, JavaToken
+    Annotation, Literal, Operator, JavaToken,
     )
 
 ENABLE_DEBUG_SUPPORT = False
@@ -1731,7 +1731,16 @@ class Parser(object):
             return tree.TernaryExpression(condition=expression_2,
                                           if_true=true_expression,
                                           if_false=false_expression)
-
+        if self.would_accept('->'):
+            body = self.parse_lambda_method_body()
+            return tree.LambdaExpression(parameters=[expression_2],
+                                         body=body)
+        if self.try_accept('::'):
+            method_reference, type_arguments = self.parse_method_reference()
+            return tree.MethodReference(
+                expression=expression_2,
+                method=method_reference,
+                type_arguments=type_arguments)
         return expression_2
 
     @parse_debug
@@ -1769,11 +1778,17 @@ class Parser(object):
     @parse_debug
     def parse_expression_3(self):
         prefix_operators = list()
-
         while self.tokens.look().value in Operator.PREFIX:
             prefix_operators.append(self.tokens.next().value)
 
         if self.would_accept('('):
+            try:
+                with self.tokens:
+                        lambda_exp = self.parse_lambda_expression()
+                        if lambda_exp:
+                            return lambda_exp
+            except JavaSyntaxError:
+                pass
             try:
                 with self.tokens:
                     self.accept('(')
@@ -1803,6 +1818,43 @@ class Parser(object):
             token = self.tokens.look()
 
         return primary
+
+    @parse_debug
+    def parse_method_reference(self):
+        type_arguments = list()
+        if self.would_accept('<'):
+            type_arguments = self.parse_nonwildcard_type_arguments()
+        if self.would_accept('new'):
+            method_reference = tree.MemberReference(member=self.accept('new'))
+        else:
+            method_reference = self.parse_expression()
+        return method_reference, type_arguments
+
+    @parse_debug
+    def parse_lambda_expression(self):
+        lambda_expr = None
+        parameters = None
+        if self.would_accept('(', Identifier, ','):
+            self.accept('(')
+            parameters = []
+            while not self.would_accept(')'):
+                parameters.append(tree.InferredFormalParameter(
+                    name=self.parse_identifier()))
+                self.try_accept(',')
+            self.accept(')')
+        else:
+            parameters = self.parse_formal_parameters()
+        body = self.parse_lambda_method_body()
+        return tree.LambdaExpression(parameters=parameters,
+                                     body=body)
+
+    @parse_debug
+    def parse_lambda_method_body(self):
+        if self.accept('->'):
+            if self.would_accept('{'):
+                return self.parse_block()
+            else:
+                return self.parse_expression()
 
     @parse_debug
     def parse_infix_operator(self):
@@ -1840,7 +1892,9 @@ class Parser(object):
                 return tree.ExplicitConstructorInvocation(arguments=arguments)
 
             return tree.This()
-
+        elif self.would_accept('super', '::'):
+            self.accept('super')
+            return token
         elif self.try_accept('super'):
             super_suffix = self.parse_super_suffix()
             return super_suffix
@@ -2135,7 +2189,9 @@ class Parser(object):
                                                  arguments=arguments)
                 else:
                     return tree.MemberReference(member=identifier)
-
+            elif self.would_accept('super', '::'):
+                self.accept('super')
+                return token
             elif self.would_accept('<'):
                 return self.parse_explicit_generic_invocation()
             elif self.try_accept('this'):

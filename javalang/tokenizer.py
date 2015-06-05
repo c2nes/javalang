@@ -98,7 +98,7 @@ class Operator(JavaToken):
     VALUES = set(['>>>=', '>>=', '<<=',  '%=', '^=', '|=', '&=', '/=',
                   '*=', '-=', '+=', '<<', '--', '++', '||', '&&', '!=',
                   '>=', '<=', '==', '%', '^', '|', '&', '/', '*', '-',
-                  '+', ':', '?', '~', '!', '<', '>', '=', '...'])
+                  '+', ':', '?', '~', '!', '<', '>', '=', '...', '->', '::'])
 
     # '>>>' and '>>' are excluded so that >> becomes two tokens and >>> becomes
     # three. This is done because we can not distinguish the operators >> and
@@ -116,6 +116,10 @@ class Operator(JavaToken):
     ASSIGNMENT = set(['=', '+=', '-=', '*=', '/=', '&=', '|=', '^=', '%=',
                       '<<=', '>>=', '>>>='])
 
+    LAMBDA = set(['->'])
+
+    METHOD_REFERENCE = set(['::',])
+
     def is_infix(self):
         return self.value in self.INFIX
 
@@ -128,11 +132,13 @@ class Operator(JavaToken):
     def is_assignment(self):
         return self.value in self.ASSIGNMENT
 
+
 class Annotation(JavaToken):
     pass
 
 class Identifier(JavaToken):
     pass
+
 
 class JavaTokenizer(object):
 

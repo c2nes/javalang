@@ -109,6 +109,9 @@ class VariableDeclarator(Node):
 class FormalParameter(Declaration):
     attrs = ("type", "name", "varargs")
 
+class InferredFormalParameter(Node):
+    attrs = ('name',)
+
 # ------------------------------------------------------------------------------
 
 class Statement(Node):
@@ -194,6 +197,12 @@ class BinaryOperation(Expression):
 
 class Cast(Expression):
     attrs = ("type", "expression")
+
+class MethodReference(Expression):
+    attrs = ("expression", "method", "type_arguments")
+
+class LambdaExpression(Expression):
+    attrs = ('parameters', 'body')
 
 # ------------------------------------------------------------------------------
 
