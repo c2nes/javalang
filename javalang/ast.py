@@ -32,7 +32,7 @@ class Node(object):
             raise ValueError('Extraneous arguments')
 
     def __equals__(self, other):
-        if type(other) is type(self):
+        if type(other) is not type(self):
             return False
 
         for attr in self.attrs:
