@@ -736,7 +736,7 @@ class Parser(object):
 
             self.accept(',')
 
-        return element_value
+        return element_values
 
 # ------------------------------------------------------------------------------
 # -- Class body --
