@@ -955,17 +955,13 @@ class Parser(object):
         if self.try_accept(';'):
             return None
 
-        modifiers, annotations, javadoc = self.parse_modifiers()
-
         declaration = self.parse_interface_member_declaration()
-        declaration.modifiers = modifiers
-        declaration.annotations = annotations
-        declaration.documentation = javadoc
 
         return declaration
 
     @parse_debug
     def parse_interface_member_declaration(self):
+        modifiers, annotations, javadoc = self.parse_modifiers()
         declaration = None
 
         if self.would_accept('class'):
@@ -977,21 +973,25 @@ class Parser(object):
         elif self.is_annotation_declaration():
             declaration = self.parse_annotation_type_declaration()
         elif self.would_accept('<'):
-            declaration = self.parse_interface_generic_method_declarator()
+            declaration = self.parse_interface_generic_method_declarator(modifiers)
         elif self.try_accept('void'):
             method_name = self.parse_identifier()
-            declaration = self.parse_void_interface_method_declarator_rest()
+            declaration = self.parse_void_interface_method_declarator_rest(modifiers)
             declaration.name = method_name
         else:
-            declaration = self.parse_interface_method_or_field_declaration()
+            declaration = self.parse_interface_method_or_field_declaration(modifiers)
+
+        declaration.modifiers = modifiers
+        declaration.annotations = annotations
+        declaration.documentation = javadoc
 
         return declaration
 
     @parse_debug
-    def parse_interface_method_or_field_declaration(self):
+    def parse_interface_method_or_field_declaration(self, modifiers=()):
         java_type = self.parse_type()
         name = self.parse_identifier()
-        member = self.parse_interface_method_or_field_rest()
+        member = self.parse_interface_method_or_field_rest(modifiers)
 
         if isinstance(member, tree.MethodDeclaration):
             java_type.dimensions += member.return_type.dimensions
@@ -1004,11 +1004,11 @@ class Parser(object):
         return member
 
     @parse_debug
-    def parse_interface_method_or_field_rest(self):
+    def parse_interface_method_or_field_rest(self, modifiers=()):
         rest = None
 
         if self.would_accept('('):
-            rest = self.parse_interface_method_declarator_rest()
+            rest = self.parse_interface_method_declarator_rest(modifiers)
         else:
             rest = self.parse_constant_declarators_rest()
             self.accept(';')
@@ -1045,35 +1045,45 @@ class Parser(object):
                                        initializer=initializer)
 
     @parse_debug
-    def parse_interface_method_declarator_rest(self):
+    def parse_interface_method_declarator_rest(self, modifiers=()):
         parameters = self.parse_formal_parameters()
         array_dimension = self.parse_array_dimension()
         throws = None
+        body = None
 
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
 
-        self.accept(';')
+        if 'default' in modifiers or 'static' in modifiers:
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
         return tree.MethodDeclaration(parameters=parameters,
                                       throws=throws,
+                                      body=body,
                                       return_type=tree.Type(dimensions=array_dimension))
 
     @parse_debug
-    def parse_void_interface_method_declarator_rest(self):
+    def parse_void_interface_method_declarator_rest(self, modifiers=()):
         parameters = self.parse_formal_parameters()
         throws = None
+        body = None
 
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
 
-        self.accept(';')
+        if 'default' in modifiers or 'static' in modifiers:
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
         return tree.MethodDeclaration(parameters=parameters,
-                                      throws=throws)
+                                      throws=throws,
+                                      body=body)
 
     @parse_debug
-    def parse_interface_generic_method_declarator(self):
+    def parse_interface_generic_method_declarator(self, modifiers=()):
         type_parameters = self.parse_type_parameters()
         return_type = None
         method_name = None
@@ -1082,7 +1092,7 @@ class Parser(object):
             return_type = self.parse_type()
 
         method_name = self.parse_identifier()
-        method = self.parse_interface_method_declarator_rest()
+        method = self.parse_interface_method_declarator_rest(modifiers)
         method.name = method_name
         method.return_type = return_type
         method.type_parameters = type_parameters
