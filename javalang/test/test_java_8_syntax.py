@@ -203,6 +203,37 @@ class MethodReferenceSyntaxTest(unittest.TestCase):
         self.assert_contains_method_reference_expression_in_m(
             parse.parse(setup_java_class("int[]::new;")))
 
+class InterfaceSupportTest(unittest.TestCase):
+ 
+     """ Contains tests for java 8 interface extensions. """
+ 
+    def test_interface_support_static_methods(self):
+        parse.parse("""
+interface Foo {
+     void foo();
+ 
+     static Foo create() {
+         return new Foo() {
+             @Override
+             void foo() {
+                 System.out.println("foo");
+             }
+         };
+     }
+ }
+         """)
+ 
+     def test_interface_support_default_methods(self):
+         parse.parse("""
+ interface Foo {
+     default void foo() {
+         System.out.println("foo");
+     }
+ }
+         """)
+ 
+ 
+
 
 def main():
     unittest.main()

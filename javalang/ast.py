@@ -17,13 +17,22 @@ class MetaNode(type):
         return type.__new__(mcs, name, bases, dict)
 
 
+class Position:
+    def __init__(self):
+        self.start = None
+        self.end = None
+
+    def __repr__(self):
+        return '<Position start: '+str(self.start)+', end: '+str(self.end)+'>'
+
+
 @six.add_metaclass(MetaNode)
 class Node(object):
     attrs = ()
 
     def __init__(self, **kwargs):
         values = kwargs.copy()
-
+        self.position = Position()
         for attr_name in self.attrs:
             value = values.pop(attr_name, None)
             setattr(self, attr_name, value)

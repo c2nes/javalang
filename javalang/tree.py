@@ -40,7 +40,7 @@ class EnumDeclaration(TypeDeclaration):
     attrs = ("implements",)
 
 class InterfaceDeclaration(TypeDeclaration):
-    attrs = ("type_parameters", "extends",)
+    attrs = ("type_parameters", "extends")
 
 class AnnotationDeclaration(TypeDeclaration):
     attrs = ()
@@ -154,6 +154,9 @@ class SwitchStatement(Statement):
     attrs = ("expression", "cases")
 
 class BlockStatement(Statement):
+    attrs = ("statements",)
+
+class StaticBlock(Statement):
     attrs = ("statements",)
 
 class StatementExpression(Statement):
