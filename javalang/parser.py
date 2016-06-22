@@ -2,7 +2,7 @@ import six
 
 import .util
 import .tree
-from tokenizer import (
+from .tokenizer import (
     EndOfInput, Keyword, Modifier, BasicType, Identifier,
     Annotation, Literal, Operator, JavaToken,
     )
