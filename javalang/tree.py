@@ -207,7 +207,7 @@ class LambdaExpression(Expression):
 # ------------------------------------------------------------------------------
 
 class Primary(Expression):
-    attrs = ("prefix_operations", "postfix_operations", "qualifier", "selectors")
+    attrs = ("prefix_operators", "postfix_operators", "qualifier", "selectors")
 
 class Literal(Primary):
     attrs = ("value",)
