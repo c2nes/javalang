@@ -3,6 +3,9 @@
 javalang
 ========
 
+.. image:: https://travis-ci.org/c2nes/javalang.svg?branch=master
+  :target: https://travis-ci.org/c2nes/javalang
+
 javalang is a pure Python library for working with Java source
 code. javalang provides a lexer and parser targeting Java 7. The
 implementation is based on the Java language spec available at
