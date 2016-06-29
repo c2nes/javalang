@@ -1999,11 +1999,11 @@ class Parser(object):
         else:
             arguments = self.parse_arguments()
 
-        if identifier and arguments:
+        if identifier and arguments is not None:
             return tree.SuperMethodInvocation(member=identifier,
                                               arguments=arguments,
                                               type_arguments=type_arguments)
-        elif arguments:
+        elif arguments is not None:
             return tree.SuperConstructorInvocation(arguments=arguments)
         else:
             return tree.SuperMemberReference(member=identifier)
