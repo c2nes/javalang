@@ -1053,7 +1053,10 @@ class Parser(object):
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
 
-        self.accept(';')
+        if self.would_accept('{'):
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
         return tree.MethodDeclaration(parameters=parameters,
                                       throws=throws,
@@ -1067,7 +1070,10 @@ class Parser(object):
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
 
-        self.accept(';')
+        if self.would_accept('{'):
+            body = self.parse_block()
+        else:
+            self.accept(';')
 
         return tree.MethodDeclaration(parameters=parameters,
                                       throws=throws)
