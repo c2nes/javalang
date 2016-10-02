@@ -1049,6 +1049,7 @@ class Parser(object):
         parameters = self.parse_formal_parameters()
         array_dimension = self.parse_array_dimension()
         throws = None
+        body = None
 
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
@@ -1060,12 +1061,14 @@ class Parser(object):
 
         return tree.MethodDeclaration(parameters=parameters,
                                       throws=throws,
+                                      body=body,
                                       return_type=tree.Type(dimensions=array_dimension))
 
     @parse_debug
     def parse_void_interface_method_declarator_rest(self):
         parameters = self.parse_formal_parameters()
         throws = None
+        body = None
 
         if self.try_accept('throws'):
             throws = self.parse_qualified_identifier_list()
@@ -1076,7 +1079,8 @@ class Parser(object):
             self.accept(';')
 
         return tree.MethodDeclaration(parameters=parameters,
-                                      throws=throws)
+                                      throws=throws,
+                                      body=body)
 
     @parse_debug
     def parse_interface_generic_method_declarator(self):
