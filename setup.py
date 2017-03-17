@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name = "javalang",
     packages = ["javalang"],
-    version = "0.10.1",
+    version = "0.10.2",
     author = "Chris Thunes",
     author_email = "cthunes@brewtab.com",
     url = "http://github.com/c2nes/javalang",
