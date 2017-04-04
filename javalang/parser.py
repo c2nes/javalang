@@ -289,8 +289,9 @@ class Parser(object):
             self.accept(';')
         else:
             self.tokens.pop_marker(True)
-            package_annotations = None
-
+            package = tree.PackageDeclaration(annotations=package_annotations,
+                                              name='default package',
+                                              documentation=javadoc)
         while self.would_accept('import'):
             token = self.tokens.look()
             import_declaration = self.parse_import_declaration()
