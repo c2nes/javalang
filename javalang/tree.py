@@ -39,6 +39,14 @@ class ClassDeclaration(TypeDeclaration):
 class EnumDeclaration(TypeDeclaration):
     attrs = ("implements",)
 
+    @property
+    def fields(self):
+        return [decl for decl in self.body.declarations if isinstance(decl, FieldDeclaration)]
+
+    @property
+    def methods(self):
+        return [decl for decl in self.body.declarations if isinstance(decl, MethodDeclaration)]
+
 class InterfaceDeclaration(TypeDeclaration):
     attrs = ("type_parameters", "extends",)
 
