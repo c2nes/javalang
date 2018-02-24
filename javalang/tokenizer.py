@@ -416,7 +416,7 @@ class JavaTokenizer(object):
     def read_identifier(self):
         self.j = self.i + 1
 
-        while unicodedata.category(self.data[self.j]) in self.IDENT_PART_CATEGORIES:
+        while self.j < len(self.data) and unicodedata.category(self.data[self.j]) in self.IDENT_PART_CATEGORIES:
             self.j += 1
 
         ident = self.data[self.i:self.j]
