@@ -535,7 +535,7 @@ class JavaTokenizer(object):
                 token_type = Annotation
                 self.j = self.i + 1
 
-            elif c == '.' and c_next.isdigit():
+            elif c == '.' and c_next and c_next.isdigit():
                 token_type = self.read_decimal_float_or_integer()
 
             elif self.try_separator():

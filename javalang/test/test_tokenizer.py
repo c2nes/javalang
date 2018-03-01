@@ -43,3 +43,14 @@ class TestTokenizer(unittest.TestCase):
 
         # Then
         self.assertEqual(len(tokens), 11)
+
+    def test_tokenize_comment_line_with_period(self):
+
+        # Given
+        code = "   * all of the servlets resistant to cross-site scripting attacks."
+
+        # When
+        tokens = list(tokenizer.tokenize(code))
+
+        # Then
+        self.assertEqual(len(tokens), 13)
