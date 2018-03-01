@@ -556,6 +556,8 @@ class JavaTokenizer(object):
 
             else:
                 self.error('Could not process token', c)
+                self.i = self.i + 1
+                continue
 
             position = (self.current_line, self.i - self.start_of_line)
             token = token_type(self.data[self.i:self.j], position, self.javadoc)
@@ -579,10 +581,12 @@ class JavaTokenizer(object):
 
         message = u'%s at "%s", line %s: %s' % (message, char, line_number, line)
 
-        raise LexerError(message)
+        if not self.ignore_errors:
+            raise LexerError(message)
 
-def tokenize(code):
+def tokenize(code, ignore_errors=False):
     tokenizer = JavaTokenizer(code)
+    tokenizer.ignore_errors = ignore_errors
     return tokenizer.tokenize()
 
 def reformat_tokens(tokens):
