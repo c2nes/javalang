@@ -289,7 +289,7 @@ class JavaTokenizer(object):
 
         self.read_decimal_integer()
 
-        if self.data[self.j] not in '.eEfFdD':
+        if self.j >= len(self.data) or self.data[self.j] not in '.eEfFdD':
             return DecimalInteger
 
         if self.data[self.j] == '.':
@@ -345,7 +345,7 @@ class JavaTokenizer(object):
         tmp_i = 0
         c = None
 
-        while True:
+        while self.j + tmp_i < len(self.data):
             c = self.data[self.j + tmp_i]
 
             if c in digits:
