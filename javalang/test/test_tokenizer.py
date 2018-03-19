@@ -60,3 +60,16 @@ class TestTokenizer(unittest.TestCase):
 
         # Then
         self.assertEqual(len(tokens), 14)
+
+    def test_string_delim_within_comment(self):
+
+        # Given
+        code = "* Returns 0 if it can't find the end \
+                if (*itr == '\r') { \
+                        int status;"
+
+        # When
+        tokens = list(tokenizer.tokenize(code, ignore_errors=True))
+
+        # Then
+        self.assertEqual(len(tokens), 8)

@@ -193,6 +193,7 @@ class JavaTokenizer(object):
         while True:
             if j >= length:
                 self.error('Unterminated character/string literal')
+                break
 
             if state == 0:
                 if self.data[j] == '\\':
