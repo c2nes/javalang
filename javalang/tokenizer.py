@@ -149,6 +149,7 @@ class JavaTokenizer(object):
     def __init__(self, data, ignore_errors=False):
         self.data = data
         self.ignore_errors = ignore_errors
+        self.errors = []
 
         self.current_line = 1
         self.start_of_line = 0
@@ -582,9 +583,11 @@ class JavaTokenizer(object):
             char = self.data[self.j]
 
         message = u'%s at "%s", line %s: %s' % (message, char, line_number, line)
+        error = LexerError(message)
+        self.errors.append(error)
 
         if not self.ignore_errors:
-            raise LexerError(message)
+            raise error
 
 def tokenize(code, ignore_errors=False):
     tokenizer = JavaTokenizer(code, ignore_errors)
