@@ -146,8 +146,9 @@ class JavaTokenizer(object):
 
     IDENT_PART_CATEGORIES = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mc', 'Mn', 'Nd', 'Nl', 'Pc', 'Sc'])
 
-    def __init__(self, data):
+    def __init__(self, data, ignore_errors=False):
         self.data = data
+        self.ignore_errors = ignore_errors
 
         self.current_line = 1
         self.start_of_line = 0
@@ -586,8 +587,7 @@ class JavaTokenizer(object):
             raise LexerError(message)
 
 def tokenize(code, ignore_errors=False):
-    tokenizer = JavaTokenizer(code)
-    tokenizer.ignore_errors = ignore_errors
+    tokenizer = JavaTokenizer(code, ignore_errors)
     return tokenizer.tokenize()
 
 def reformat_tokens(tokens):
