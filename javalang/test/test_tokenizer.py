@@ -51,9 +51,39 @@ class TestTokenizer(unittest.TestCase):
         # Then
         self.assertEqual(len(tokens), 13)
 
-    def test_tokenize_number_at_end(self):
+    def test_tokenize_integer_at_end(self):
         # Given
         code = "nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3"
+
+        # When
+        tokens = list(tokenizer.tokenize(code, ignore_errors=True))
+
+        # Then
+        self.assertEqual(len(tokens), 14)
+
+    def test_tokenize_float_at_end(self):
+        # Given
+        code = "nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 3.0"
+
+        # When
+        tokens = list(tokenizer.tokenize(code, ignore_errors=True))
+
+        # Then
+        self.assertEqual(len(tokens), 14)
+
+    def test_tokenize_hex_integer_at_end(self):
+        # Given
+        code = "nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 0x3"
+
+        # When
+        tokens = list(tokenizer.tokenize(code, ignore_errors=True))
+
+        # Then
+        self.assertEqual(len(tokens), 14)
+
+    def test_tokenize_hex_float_integer_at_end(self):
+        # Given
+        code = "nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 0x3.2p2"
 
         # When
         tokens = list(tokenizer.tokenize(code, ignore_errors=True))

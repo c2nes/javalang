@@ -297,16 +297,16 @@ class JavaTokenizer(object):
             self.i = self.j + 1
             self.read_decimal_integer()
 
-        if self.data[self.j] in 'eE':
+        if self.j < len(self.data) and self.data[self.j] in 'eE':
             self.j = self.j + 1
 
-            if self.data[self.j] in '-+':
+            if self.j < len(self.data) and self.data[self.j] in '-+':
                 self.j = self.j + 1
 
             self.i = self.j
             self.read_decimal_integer()
 
-        if self.data[self.j] in 'fFdD':
+        if self.j < len(self.data) and self.data[self.j] in 'fFdD':
             self.j = self.j + 1
 
         self.i = orig_i
@@ -318,25 +318,25 @@ class JavaTokenizer(object):
 
         self.read_hex_integer()
 
-        if self.data[self.j] not in '.pP':
+        if self.j >= len(self.data) or self.data[self.j] not in '.pP':
             return HexInteger
 
         if self.data[self.j] == '.':
             self.j = self.j + 1
             self.read_digits('0123456789abcdefABCDEF')
 
-        if self.data[self.j] in 'pP':
+        if self.j < len(self.data) and self.data[self.j] in 'pP':
             self.j = self.j + 1
         else:
             self.error('Invalid hex float literal')
 
-        if self.data[self.j] in '-+':
+        if self.j < len(self.data) and self.data[self.j] in '-+':
             self.j = self.j + 1
 
         self.i = self.j
         self.read_decimal_integer()
 
-        if self.data[self.j] in 'fFdD':
+        if self.j < len(self.data) and self.data[self.j] in 'fFdD':
             self.j = self.j + 1
 
         self.i = orig_i
