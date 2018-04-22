@@ -146,8 +146,10 @@ class JavaTokenizer(object):
 
     IDENT_PART_CATEGORIES = set(['Lu', 'Ll', 'Lt', 'Lm', 'Lo', 'Mc', 'Mn', 'Nd', 'Nl', 'Pc', 'Sc'])
 
-    def __init__(self, data):
+    def __init__(self, data, ignore_errors=False):
         self.data = data
+        self.ignore_errors = ignore_errors
+        self.errors = []
 
         self.current_line = 1
         self.start_of_line = 0
@@ -193,6 +195,7 @@ class JavaTokenizer(object):
         while True:
             if j >= length:
                 self.error('Unterminated character/string literal')
+                break
 
             if state == 0:
                 if self.data[j] == '\\':
@@ -289,23 +292,23 @@ class JavaTokenizer(object):
 
         self.read_decimal_integer()
 
-        if self.data[self.j] not in '.eEfFdD':
+        if self.j >= len(self.data) or self.data[self.j] not in '.eEfFdD':
             return DecimalInteger
 
         if self.data[self.j] == '.':
             self.i = self.j + 1
             self.read_decimal_integer()
 
-        if self.data[self.j] in 'eE':
+        if self.j < len(self.data) and self.data[self.j] in 'eE':
             self.j = self.j + 1
 
-            if self.data[self.j] in '-+':
+            if self.j < len(self.data) and self.data[self.j] in '-+':
                 self.j = self.j + 1
 
             self.i = self.j
             self.read_decimal_integer()
 
-        if self.data[self.j] in 'fFdD':
+        if self.j < len(self.data) and self.data[self.j] in 'fFdD':
             self.j = self.j + 1
 
         self.i = orig_i
@@ -317,25 +320,25 @@ class JavaTokenizer(object):
 
         self.read_hex_integer()
 
-        if self.data[self.j] not in '.pP':
+        if self.j >= len(self.data) or self.data[self.j] not in '.pP':
             return HexInteger
 
         if self.data[self.j] == '.':
             self.j = self.j + 1
             self.read_digits('0123456789abcdefABCDEF')
 
-        if self.data[self.j] in 'pP':
+        if self.j < len(self.data) and self.data[self.j] in 'pP':
             self.j = self.j + 1
         else:
             self.error('Invalid hex float literal')
 
-        if self.data[self.j] in '-+':
+        if self.j < len(self.data) and self.data[self.j] in '-+':
             self.j = self.j + 1
 
         self.i = self.j
         self.read_decimal_integer()
 
-        if self.data[self.j] in 'fFdD':
+        if self.j < len(self.data) and self.data[self.j] in 'fFdD':
             self.j = self.j + 1
 
         self.i = orig_i
@@ -345,7 +348,7 @@ class JavaTokenizer(object):
         tmp_i = 0
         c = None
 
-        while True:
+        while self.j + tmp_i < len(self.data):
             c = self.data[self.j + tmp_i]
 
             if c in digits:
@@ -535,7 +538,7 @@ class JavaTokenizer(object):
                 token_type = Annotation
                 self.j = self.i + 1
 
-            elif c == '.' and c_next.isdigit():
+            elif c == '.' and c_next and c_next.isdigit():
                 token_type = self.read_decimal_float_or_integer()
 
             elif self.try_separator():
@@ -556,6 +559,8 @@ class JavaTokenizer(object):
 
             else:
                 self.error('Could not process token', c)
+                self.i = self.i + 1
+                continue
 
             position = (self.current_line, self.i - self.start_of_line)
             token = token_type(self.data[self.i:self.j], position, self.javadoc)
@@ -578,11 +583,14 @@ class JavaTokenizer(object):
             char = self.data[self.j]
 
         message = u'%s at "%s", line %s: %s' % (message, char, line_number, line)
+        error = LexerError(message)
+        self.errors.append(error)
 
-        raise LexerError(message)
+        if not self.ignore_errors:
+            raise error
 
-def tokenize(code):
-    tokenizer = JavaTokenizer(code)
+def tokenize(code, ignore_errors=False):
+    tokenizer = JavaTokenizer(code, ignore_errors)
     return tokenizer.tokenize()
 
 def reformat_tokens(tokens):
