@@ -251,7 +251,7 @@ class JavaTokenizer(object):
 
             i += 1
 
-            self.start_of_line = i
+            self.start_of_line = i - 1
             self.current_line += 1
             self.i = i
 
