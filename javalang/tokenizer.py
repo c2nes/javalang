@@ -249,10 +249,7 @@ class JavaTokenizer(object):
                 self.i = self.length
                 return
 
-            i += 1
-
-            self.start_of_line = i - 1
-            self.current_line += 1
+            self.start_of_line = i
             self.i = i
 
         else:
