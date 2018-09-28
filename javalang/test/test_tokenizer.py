@@ -95,6 +95,8 @@ public int function() {
         tokens = list(tokenizer.tokenize(code))
 
         # Then
+        # both token 6 and 11 are the "int" tokens of line 2 and 4
+        self.assertEqual(tokens[6].position[1], 5)
         self.assertEqual(tokens[6].position[1], tokens[11].position[1])
 
     def test_tokenize_hex_float_integer_at_end(self):
