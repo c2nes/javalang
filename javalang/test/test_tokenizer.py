@@ -81,6 +81,22 @@ class TestTokenizer(unittest.TestCase):
         # Then
         self.assertEqual(len(tokens), 14)
 
+    def test_tokenize_token_position_after_comment(self):
+        # Given
+        code = """
+public int function() {
+    int a = 10;
+    // some comment
+    int b = 10;
+}
+        """
+
+        # When
+        tokens = list(tokenizer.tokenize(code))
+
+        # Then
+        self.assertEqual(tokens[6].position[1], tokens[11].position[1])
+
     def test_tokenize_hex_float_integer_at_end(self):
         # Given
         code = "nextKey = new BlockKey(serialNo, System.currentTimeMillis() + 0x3.2p2"
@@ -103,3 +119,6 @@ class TestTokenizer(unittest.TestCase):
 
         # Then
         self.assertEqual(len(tokens), 8)
+
+if __name__=="__main__":
+    unittest.main()
