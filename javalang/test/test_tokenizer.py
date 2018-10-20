@@ -122,5 +122,13 @@ public int function() {
         # Then
         self.assertEqual(len(tokens), 8)
 
+    def test_column_starts_at_one(self):
+        code = """int j;
+int k;
+"""
+        token = list(tokenizer.tokenize(code))
+        self.assertEqual(token[0].position.col, 1)
+        self.assertEqual(token[3].position.col, 1)
+
 if __name__=="__main__":
     unittest.main()

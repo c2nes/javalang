@@ -151,8 +151,9 @@ class JavaTokenizer(object):
         self.ignore_errors = ignore_errors
         self.errors = []
 
+        # Rows and columns both start at 1
         self.current_line = 1
-        self.start_of_line = 0
+        self.start_of_line = -1
 
         self.operators = [set() for i in range(0, Operator.MAX_LEN)]
 
