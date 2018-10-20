@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name = "javalang",
     packages = ["javalang"],
-    version = "0.11.0",
+    version = "0.12.0",
     author = "Chris Thunes",
     author_email = "cthunes@brewtab.com",
     url = "http://github.com/c2nes/javalang",
@@ -23,9 +23,9 @@ javalang
 ========
 
 javalang is a pure Python library for working with Java source
-code. javalang provies a lexer and parser targeting Java 7. The
+code. javalang provies a lexer and parser targeting Java 8. The
 implementation is based on the Java language spec available at
-http://docs.oracle.com/javase/specs/jls/se7/html/.
+http://docs.oracle.com/javase/specs/jls/se8/html/.
 
 """,
     zip_safe = False,
