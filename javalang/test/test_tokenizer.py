@@ -142,6 +142,34 @@ public int function() {
         self.assertEqual(semi_token.position.line, 1)
         self.assertEqual(semi_token.position.column, 20)
 
+    def test_multiline_inline_comment(self):
+        code = """int /*
+hello
+world
+*/ j;"""
+
+        tokens = list(tokenizer.tokenize(code))
+        token_int = tokens[0]
+        token_j = tokens[1]
+
+        self.assertEqual(token_int.position.line, 1)
+        self.assertEqual(token_int.position.column, 1)
+
+        self.assertEqual(token_j.position.line, 4)
+        self.assertEqual(token_j.position.column, 4)
+
+    def test_multiline_inline_comment_end_of_input(self):
+        code = """int /*
+hello
+world
+*/"""
+
+        tokens = list(tokenizer.tokenize(code))
+        token_int = tokens[0]
+
+        self.assertEqual(token_int.position.line, 1)
+        self.assertEqual(token_int.position.column, 1)
+
     def test_column_starts_at_one(self):
         code = """int j;
 int k;
