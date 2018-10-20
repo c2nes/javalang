@@ -122,13 +122,33 @@ public int function() {
         # Then
         self.assertEqual(len(tokens), 8)
 
+    def test_inline_comment_position(self):
+        # Columns
+        #                11111111112
+        #       12345678901234567890
+        code = "int /* comment */ j;"
+        tokens = list(tokenizer.tokenize(code))
+
+        int_token = tokens[0]
+        j_token = tokens[1]
+        semi_token = tokens[2]
+
+        self.assertEqual(int_token.position.line, 1)
+        self.assertEqual(int_token.position.column, 1)
+
+        self.assertEqual(j_token.position.line, 1)
+        self.assertEqual(j_token.position.column, 19)
+
+        self.assertEqual(semi_token.position.line, 1)
+        self.assertEqual(semi_token.position.column, 20)
+
     def test_column_starts_at_one(self):
         code = """int j;
 int k;
 """
         token = list(tokenizer.tokenize(code))
-        self.assertEqual(token[0].position.col, 1)
-        self.assertEqual(token[3].position.col, 1)
+        self.assertEqual(token[0].position.column, 1)
+        self.assertEqual(token[3].position.column, 1)
 
 if __name__=="__main__":
     unittest.main()

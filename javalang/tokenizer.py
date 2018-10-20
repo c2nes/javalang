@@ -247,45 +247,28 @@ class JavaTokenizer(object):
 
     def read_comment(self):
         if self.data[self.i + 1] == '/':
-            i = self.data.find('\n', self.i + 2)
-
-            if i == -1:
-                self.i = self.length
-                return
-
-            self.start_of_line = i
-            self.i = i
-
+            terminator = '\n'
         else:
-            i = self.data.find('*/', self.i + 2)
+            terminator = '*/'
 
-            if i == -1:
-                self.i = self.length
-                return
+        i = self.data.find(terminator, self.i + 2)
 
-            i += 2
+        if i == -1:
+            self.i = self.length
+            return
 
-            self.start_of_line = i
+        i += len(terminator)
+
+        comment = self.data[self.i:i]
+        start_of_line = self.data.rfind('\n', self.i, i)
+
+        if start_of_line != -1:
+            self.start_of_line = start_of_line
             self.current_line += self.data.count('\n', self.i, i)
-            self.i = i
 
-    def try_javadoc_comment(self):
-        if self.i + 2 >= self.length or self.data[self.i + 2] != '*':
-            return False
+        self.i = i
 
-        j = self.data.find('*/', self.i + 2)
-
-        if j == -1:
-            self.j = self.length
-            return False
-
-        j += 2
-
-        self.start_of_line = j
-        self.current_line += self.data.count('\n', self.i, j)
-        self.j = j
-
-        return True
+        return comment
 
     def read_decimal_float_or_integer(self):
         orig_i = self.i
@@ -521,11 +504,9 @@ class JavaTokenizer(object):
                 continue
 
             elif startswith in ("//", "/*"):
-                if startswith == "/*" and self.try_javadoc_comment():
-                    self.javadoc = self.data[self.i:self.j]
-                    self.i = self.j
-                else:
-                    self.read_comment()
+                comment = self.read_comment()
+                if comment.startswith("/**"):
+                    self.javadoc = comment
                 continue
 
             elif startswith == '..' and self.try_operator():
