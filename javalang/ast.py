@@ -42,7 +42,10 @@ class Node(object):
         return True
 
     def __repr__(self):
-        return type(self).__name__
+        attr_values = []
+        for attr in sorted(self.attrs):
+            attr_values.append('%s=%s' % (attr, getattr(self, attr)))
+        return '%s(%s)' % (type(self).__name__, ', '.join(attr_values))
 
     def __iter__(self):
         return walk_tree(self)
