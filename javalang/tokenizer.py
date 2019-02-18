@@ -258,8 +258,10 @@ class JavaTokenizer(object):
         elif accept_eof:
             i = self.length
         else:
+            self.error('Unterminated block comment')
+            partial_comment = self.data[self.i:]
             self.i = self.length
-            return
+            return partial_comment
 
         comment = self.data[self.i:i]
         start_of_line = self.data.rfind('\n', self.i, i)
