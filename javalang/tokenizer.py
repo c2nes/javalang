@@ -247,17 +247,19 @@ class JavaTokenizer(object):
 
     def read_comment(self):
         if self.data[self.i + 1] == '/':
-            terminator = '\n'
+            terminator, accept_eof = '\n', True
         else:
-            terminator = '*/'
+            terminator, accept_eof = '*/', False
 
         i = self.data.find(terminator, self.i + 2)
 
-        if i == -1:
+        if i != -1:
+            i += len(terminator)
+        elif accept_eof:
+            i = self.length
+        else:
             self.i = self.length
             return
-
-        i += len(terminator)
 
         comment = self.data[self.i:i]
         start_of_line = self.data.rfind('\n', self.i, i)

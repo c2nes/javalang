@@ -41,6 +41,16 @@ class TestTokenizer(unittest.TestCase):
         # Then
         self.assertEqual(len(tokens), 11)
 
+    def test_tokenize_line_comment_eof(self):
+        # Given
+        code = "  // This line comment at the end of the file has no newline"
+
+        # When
+        tokens = list(tokenizer.tokenize(code))
+
+        # Then
+        self.assertEqual(len(tokens), 0)
+
     def test_tokenize_comment_line_with_period(self):
         # Given
         code = "   * all of the servlets resistant to cross-site scripting attacks."
