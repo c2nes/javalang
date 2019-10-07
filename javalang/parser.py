@@ -1511,10 +1511,12 @@ class Parser(object):
                 if self.try_accept('finally'):
                     finally_block = self.parse_block()
 
-            return tree.TryStatement(resources=resource_specification,
-                                     block=block,
-                                     catches=catches,
-                                     finally_block=finally_block)
+            statement = tree.TryStatement(resources=resource_specification,
+                                          block=block,
+                                          catches=catches,
+                                          finally_block=finally_block)
+            statement._position = token.position
+            return statement
 
         else:
             expression = self.parse_expression()
