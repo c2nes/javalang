@@ -473,11 +473,16 @@ class Parser(object):
 
     @parse_debug
     def parse_basic_type(self):
-        return tree.BasicType(name=self.accept(BasicType))
+        token = self.tokens.look()
+        basic_type = tree.BasicType(name=self.accept(BasicType))
+        basic_type._position = token.position
+        return basic_type
 
     @parse_debug
     def parse_reference_type(self):
+        token = self.tokens.look()
         reference_type = tree.ReferenceType()
+        reference_type._position = token.position
         tail = reference_type
 
         while True:
@@ -516,11 +521,14 @@ class Parser(object):
         pattern_type = None
         base_type = None
 
+        token = self.tokens.look()
         if self.try_accept('?'):
-            if self.tokens.look().value in ('extends', 'super'):
-                pattern_type = self.tokens.next().value
+            if token.value in ('extends', 'super'):
+                pattern_type = tokens.next().value
             else:
-                return tree.TypeArgument(pattern_type='?')
+                type_argument = tree.TypeArgument(pattern_type='?')
+                type_argument._position = token.position
+                return type_argument
 
         if self.would_accept(BasicType):
             base_type = self.parse_basic_type()
@@ -532,8 +540,10 @@ class Parser(object):
 
         base_type.dimensions += self.parse_array_dimension()
 
-        return tree.TypeArgument(type=base_type,
+        type_argument = tree.TypeArgument(type=base_type,
                                  pattern_type=pattern_type)
+        type_argument._position = token.position
+        return type_argument
 
     @parse_debug
     def parse_nonwildcard_type_arguments(self):
