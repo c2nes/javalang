@@ -338,7 +338,7 @@ class Parser(object):
                 self.accept(';')
                 break
 
-        return tree.Import(path=qualified_identifier,
+        return tree.Import(path=tree.QualifiedIdentifier(values=qualified_identifier),
                            static=static,
                            wildcard=import_all)
 
@@ -2018,7 +2018,7 @@ class Parser(object):
                 identifier_suffix.type = tree.ReferenceType(name=qualified_identifier.pop())
 
             identifier_suffix._position = token.position
-            identifier_suffix.qualifier = qualified_identifier
+            identifier_suffix.qualifier = tree.QualifiedIdentifier(values=qualified_identifier)
 
             return identifier_suffix
 
