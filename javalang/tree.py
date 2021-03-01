@@ -34,7 +34,7 @@ class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
 
     def as_java(self):
-        return '.'.join(map(lambda q: q.value, self.name))
+        return self.name.as_java()
 
 class ClassDeclaration(TypeDeclaration):
     attrs = ("type_parameters", "extends", "implements")
@@ -282,6 +282,11 @@ class AnnotationMethod(Declaration):
     attrs = ("name", "return_type", "dimensions", "default")
 
 # ------------------------------------------------------------------------------
+class QualifiedIdentifier(Node):
+    attrs = ("values",)
+
+    def as_java(self):
+        return '.'.join(map(lambda q: q.value, self.values))
 
 class Identifier(Node):
     attrs = ("value",)

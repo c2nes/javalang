@@ -245,7 +245,7 @@ class Parser(object):
             if not self.try_accept('.'):
                 break
 
-        return qualified_identifier
+        return tree.QualifiedIdentifier(values=qualified_identifier)
 
     @parse_debug
     def parse_qualified_identifier_list(self):
