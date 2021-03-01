@@ -33,6 +33,9 @@ class TypeDeclaration(Declaration, Documented):
 class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
 
+    def as_java(self):
+        return '.'.join(map(lambda q: q.value, self.name))
+
 class ClassDeclaration(TypeDeclaration):
     attrs = ("type_parameters", "extends", "implements")
 
@@ -278,3 +281,7 @@ class EnumConstantDeclaration(Declaration, Documented):
 class AnnotationMethod(Declaration):
     attrs = ("name", "return_type", "dimensions", "default")
 
+# ------------------------------------------------------------------------------
+
+class Identifier(Node):
+    attrs = ("value",)

@@ -11,7 +11,7 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/NoAnnotationNoJavadoc.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
+        self.failUnless(ast.package.as_java() == "org.javalang.test")
         self.failIf(ast.package.annotations)
         self.failIf(ast.package.documentation)
 
@@ -19,7 +19,7 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/AnnotationOnly.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
+        self.failUnless(ast.package.as_java() == "org.javalang.test")
         self.failUnless(ast.package.annotations)
         self.failIf(ast.package.documentation)
 
@@ -27,7 +27,7 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/JavadocOnly.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
+        self.failUnless(ast.package.as_java() == "org.javalang.test")
         self.failIf(ast.package.annotations)
         self.failUnless(ast.package.documentation)
 
@@ -35,7 +35,7 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/AnnotationJavadoc.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
+        self.failUnless(ast.package.as_java() == "org.javalang.test")
         self.failUnless(ast.package.annotations)
         self.failIf(ast.package.documentation)
 
@@ -43,7 +43,7 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/JavadocAnnotation.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
+        self.failUnless(ast.package.as_java() == "org.javalang.test")
         self.failUnless(ast.package.annotations)
         self.failUnless(ast.package.documentation)
 

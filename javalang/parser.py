@@ -229,7 +229,10 @@ class Parser(object):
 
     @parse_debug
     def parse_identifier(self):
-        return self.accept(Identifier)
+        token = self.tokens.look()
+        identifier = tree.Identifier(value=self.accept(Identifier))
+        identifier._position = token.position
+        return identifier
 
     @parse_debug
     def parse_qualified_identifier(self):
@@ -242,7 +245,7 @@ class Parser(object):
             if not self.try_accept('.'):
                 break
 
-        return '.'.join(qualified_identifier)
+        return qualified_identifier
 
     @parse_debug
     def parse_qualified_identifier_list(self):
@@ -335,7 +338,7 @@ class Parser(object):
                 self.accept(';')
                 break
 
-        return tree.Import(path='.'.join(qualified_identifier),
+        return tree.Import(path=qualified_identifier,
                            static=static,
                            wildcard=import_all)
 
@@ -522,6 +525,7 @@ class Parser(object):
         base_type = None
 
         token = self.tokens.look()
+
         if self.try_accept('?'):
             if token.value in ('extends', 'super'):
                 pattern_type = tokens.next().value
@@ -540,6 +544,7 @@ class Parser(object):
 
         base_type.dimensions += self.parse_array_dimension()
 
+        token = self.tokens.look()
         type_argument = tree.TypeArgument(type=base_type,
                                  pattern_type=pattern_type)
         type_argument._position = token.position
@@ -1147,7 +1152,7 @@ class Parser(object):
 
         while True:
             modifiers, annotations = self.parse_variable_modifiers()
-            
+
             token = self.tokens.look()
             parameter_type = self.parse_type()
             varargs = False
@@ -2013,7 +2018,7 @@ class Parser(object):
                 identifier_suffix.type = tree.ReferenceType(name=qualified_identifier.pop())
 
             identifier_suffix._position = token.position
-            identifier_suffix.qualifier = '.'.join(qualified_identifier)
+            identifier_suffix.qualifier = qualified_identifier
 
             return identifier_suffix
 
