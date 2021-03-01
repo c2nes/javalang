@@ -2268,7 +2268,7 @@ class Parser(object):
 
             token = self.tokens.look()
             if isinstance(token, Identifier):
-                identifier = self.tokens.next().value
+                identifier = self.tokens.next()
                 arguments = None
 
                 if self.would_accept('('):
