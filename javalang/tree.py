@@ -230,7 +230,7 @@ class MemberReference(Primary):
     attrs = ("member",)
 
 class Invocation(Primary):
-    attrs = ("type_arguments", "arguments")
+    attrs = ("type_arguments", "arguments", "end_separator")
 
 class ExplicitConstructorInvocation(Invocation):
     attrs = ()

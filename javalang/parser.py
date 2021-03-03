@@ -2104,7 +2104,8 @@ class Parser(object):
             identifier = self.parse_identifier()
             arguments = self.parse_arguments()
             return tree.MethodInvocation(member=identifier,
-                                         arguments=arguments)
+                                         arguments=arguments,
+                                         end_separator=self.tokens.last())
 
 # ------------------------------------------------------------------------------
 # -- Creators --
@@ -2197,7 +2198,7 @@ class Parser(object):
 
         elif self.would_accept('('):
             arguments = self.parse_arguments()
-            return tree.MethodInvocation(arguments=arguments)
+            return tree.MethodInvocation(arguments=arguments, end_separator=self.tokens.last())
 
         elif self.try_accept('.', 'class'):
             return tree.ClassReference()
@@ -2275,7 +2276,8 @@ class Parser(object):
                     arguments = self.parse_arguments()
 
                     return tree.MethodInvocation(member=identifier,
-                                                 arguments=arguments)
+                                                 arguments=arguments,
+                                                 end_separator=self.tokens.last())
                 else:
                     return tree.MemberReference(member=identifier)
             elif self.would_accept('super', '::'):
