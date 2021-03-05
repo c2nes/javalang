@@ -905,7 +905,8 @@ class Parser(object):
         return tree.MethodDeclaration(parameters=formal_parameters,
                                      throws=throws,
                                      body=body,
-                                     return_type=tree.Type(dimensions=additional_dimensions))
+                                     return_type=tree.Type(dimensions=additional_dimensions),
+                                     end_separator=self.tokens.last())
 
     @parse_debug
     def parse_void_method_declarator_rest(self):
@@ -923,7 +924,8 @@ class Parser(object):
 
         return tree.MethodDeclaration(parameters=formal_parameters,
                                       throws=throws,
-                                      body=body)
+                                      body=body,
+                                      end_separator=self.tokens.last())
 
     @parse_debug
     def parse_constructor_declarator_rest(self):

@@ -13,7 +13,7 @@ class Documented(Node):
     attrs = ("documentation",)
 
 class Declaration(Node):
-    attrs = ("modifiers", "annotations")
+    attrs = ("modifiers", "annotations", "end_separator")
 
 class TypeDeclaration(Declaration, Documented):
     attrs = ("name", "body")
