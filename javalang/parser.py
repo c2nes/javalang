@@ -1909,7 +1909,8 @@ class Parser(object):
         if self.would_accept('<'):
             type_arguments = self.parse_nonwildcard_type_arguments()
         if self.would_accept('new'):
-            method_reference = tree.MemberReference(member=self.accept('new'))
+            self.accept('new')
+            method_reference = tree.MemberReference(member=self.tokens.last())
         else:
             method_reference = self.parse_expression()
         return method_reference, type_arguments
