@@ -2195,7 +2195,7 @@ class Parser(object):
     def parse_identifier_suffix(self):
         if self.try_accept('[', ']'):
             array_dimension = [None] + self.parse_array_dimension()
-            self.accept('.', 'class')
+            self.try_accept('.', 'class')
             return tree.ClassReference(type=tree.Type(dimensions=array_dimension))
 
         elif self.would_accept('('):
