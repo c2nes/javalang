@@ -279,12 +279,11 @@ class Parser(object):
         if self.try_accept('package'):
             self.tokens.pop_marker(False)
             
-            token = self.tokens.look()
             package_name = self.parse_qualified_identifier()
             package = tree.PackageDeclaration(annotations=package_annotations,
                                               name=package_name,
                                               documentation=javadoc)
-            package.start_position = token.position
+            package.start_position = next_token.position
             package.end_position = self.tokens.last().position
             
             self.accept(';')
