@@ -311,7 +311,7 @@ class Parser(object):
                                                 imports=import_declarations,
                                                 types=type_declarations)
         compilation_unit.start_position = next_token.position
-        compilation_unit.end_position = self.tokens.last().position
+        compilation_unit.end_position = next_token.position if self.tokens.last() is None else self.tokens.last().position
         return compilation_unit
 
     @parse_debug

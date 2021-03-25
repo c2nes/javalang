@@ -11,6 +11,16 @@ class TestLineNumbers(unittest.TestCase):
         ast = parse.parse(source)
         return ast
 
+    def test_empty_compilation_unit(self):
+        source = """
+        """
+        ast = parse.parse(source)
+        self.assertEqual(ast.package, None)
+        self.assertEqual(len(ast.imports), 0)
+        self.assertEqual(len(ast.types), 0)
+        self.assertEqual(ast.start_position, None)
+        self.assertEqual(ast.end_position, None)
+
     def test_compilation_unit_with_one_line_code(self):
         source_file = "source/package-info/JavadocOnly.java"
         ast = self.get_ast(source_file)
