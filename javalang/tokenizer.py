@@ -428,69 +428,12 @@ class JavaTokenizer(object):
 
         return token_type
 
-    def pre_tokenize(self):
-        new_data = list()
-        data = self.decode_data()
-
-        i = 0
-        j = 0
-        length = len(data)
-
-        NONE         = 0
-        ELIGIBLE     = 1
-        MARKER_FOUND = 2
-
-        state = NONE
-
-        while j < length:
-            if state == NONE:
-                j = data.find('\\', j)
-
-                if j == -1:
-                    j = length
-                    break
-
-                state = ELIGIBLE
-
-            elif state == ELIGIBLE:
-                c = data[j]
-
-                if c == 'u':
-                    state = MARKER_FOUND
-                    new_data.append(data[i:j - 1])
-                else:
-                    state = NONE
-
-            elif state == MARKER_FOUND:
-                c = data[j]
-
-                if c != 'u':
-                    try:
-                        escape_code = int(data[j:j+4], 16)
-                    except ValueError:
-                        self.error('Invalid unicode escape', data[j:j+4])
-
-                    new_data.append(six.unichr(escape_code))
-
-                    i = j + 4
-                    j = i
-
-                    state = NONE
-
-                    continue
-
-            j = j + 1
-
-        new_data.append(data[i:])
-
-        self.data = ''.join(new_data)
-        self.length = len(self.data)
-
     def tokenize(self):
         self.reset()
 
-        # Convert unicode escapes
-        self.pre_tokenize()
+        # Store the unicode string as raw string
+        self.data = ''.join(self.decode_data())
+        self.length = len(self.data)
 
         while self.i < self.length:
             token_type = None
