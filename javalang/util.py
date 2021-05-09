@@ -160,6 +160,6 @@ class LookAheadListIterator(object):
 
         if reset:
             self.marker = saved
-        elif self.saved_markers:
-            self.saved_markers[-1] = saved
+        #elif self.saved_markers:
+            #self.saved_markers[-1] = saved
 

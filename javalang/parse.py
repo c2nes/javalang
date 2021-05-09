@@ -51,3 +51,13 @@ def parse(s):
     tokens = tokenize(s)
     parser = Parser(tokens)
     return parser.parse()
+
+def parse_method_or_field_declaraction(s):
+    tokens = tokenize(s)
+    parser = Parser(tokens)
+    return parser.parse_method_or_field_declaraction()
+
+def parse_member_declaration(s):
+    tokens = tokenize(s)
+    parser = Parser(tokens)
+    return parser.parse_member_declaration()
