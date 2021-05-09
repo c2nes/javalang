@@ -1,6 +1,7 @@
 import pickle
 
 import six
+import sys
 
 
 class MetaNode(type):
@@ -29,7 +30,7 @@ class Node(object):
             setattr(self, attr_name, value)
 
         if values:
-            raise ValueError('Extraneous arguments')
+            raise ValueError(f'Extraneous arguments: {values} not in {self.attrs}')
 
     def __equals__(self, other):
         if type(other) is not type(self):
@@ -59,7 +60,7 @@ class Node(object):
     @property
     def children(self):
         return [getattr(self, attr_name) for attr_name in self.attrs]
-    
+
     @property
     def position(self):
         if hasattr(self, "_position"):

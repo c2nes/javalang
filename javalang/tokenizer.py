@@ -45,10 +45,12 @@ class Keyword(JavaToken):
                   'void', 'volatile', 'while'])
 
 
+
 class Modifier(Keyword):
     VALUES = set(['abstract', 'default', 'final', 'native', 'private',
                   'protected', 'public', 'static', 'strictfp', 'synchronized',
                   'transient', 'volatile'])
+
 
 class BasicType(Keyword):
     VALUES = set(['boolean', 'byte', 'char', 'double',
@@ -374,7 +376,10 @@ class JavaTokenizer(object):
             return BinaryInteger
         elif c == '0' and c_next in '01234567':
             self.read_octal_integer()
-            return OctalInteger
+            if self.j >= len(self.data) or self.data[self.j] not in '.eEfFdD':
+                return OctalInteger
+            else:
+                return self.read_decimal_float_or_integer()
         else:
             return self.read_decimal_float_or_integer()
 
