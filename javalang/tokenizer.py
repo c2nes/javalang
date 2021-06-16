@@ -8,7 +8,7 @@ import six
 class LexerError(Exception):
     pass
 
-Position = namedtuple('Position', ['line', 'column'])
+Position = namedtuple('Position', ['line', 'column', 'range'])
 
 class JavaToken(object):
     def __init__(self, value, position=None, javadoc=None):
@@ -548,7 +548,7 @@ class JavaTokenizer(object):
                 self.i = self.i + 1
                 continue
 
-            position = Position(self.current_line, self.i - self.start_of_line)
+            position = Position(self.current_line, self.i - self.start_of_line, slice(self.i, self.j))
             token = token_type(self.data[self.i:self.j], position, self.javadoc)
             yield token
 

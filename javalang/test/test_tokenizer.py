@@ -145,12 +145,15 @@ public int function() {
 
         self.assertEqual(int_token.position.line, 1)
         self.assertEqual(int_token.position.column, 1)
+        self.assertEqual(code[int_token.position.range], 'int')
 
         self.assertEqual(j_token.position.line, 1)
         self.assertEqual(j_token.position.column, 19)
+        self.assertEqual(code[j_token.position.range], 'j')
 
         self.assertEqual(semi_token.position.line, 1)
         self.assertEqual(semi_token.position.column, 20)
+        self.assertEqual(code[semi_token.position.range], ';')
 
     def test_multiline_inline_comment(self):
         code = """int /*
@@ -167,6 +170,8 @@ world
 
         self.assertEqual(token_j.position.line, 4)
         self.assertEqual(token_j.position.column, 4)
+        self.assertEqual(token_j.position.range, slice(22, 23))
+        self.assertEqual(code[token_j.position.range], 'j')
 
     def test_multiline_inline_comment_end_of_input(self):
         code = """int /*
@@ -180,6 +185,8 @@ world
         self.assertEqual(token_int.position.line, 1)
         self.assertEqual(token_int.position.column, 1)
 
+        self.assertEqual(token_int.position.range, slice(0, 3))
+
     def test_column_starts_at_one(self):
         code = """int j;
 int k;
@@ -187,6 +194,12 @@ int k;
         token = list(tokenizer.tokenize(code))
         self.assertEqual(token[0].position.column, 1)
         self.assertEqual(token[3].position.column, 1)
+
+        self.assertEqual(token[0].position.range, slice(0, 3))
+        self.assertEqual(token[3].position.range, slice(7, 10))
+
+        self.assertEqual(code[token[0].position.range], "int")
+        self.assertEqual(code[token[3].position.range], "int")
 
 if __name__=="__main__":
     unittest.main()
