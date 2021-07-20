@@ -1869,7 +1869,12 @@ class Parser(object):
 
         primary = self.parse_primary()
         primary.prefix_operators = prefix_operators
-        primary.selectors = list()
+        #primary.selectors = list()
+        #fggn 2021
+        last_selectors = list()
+        if hasattr(primary, "selectors") and isinstance(primary.selectors, list):
+            last_selectors = primary.selectors
+        primary.selectors = last_selectors
         primary.postfix_operators = list()
 
         token = self.tokens.look()
