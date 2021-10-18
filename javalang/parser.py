@@ -1869,7 +1869,8 @@ class Parser(object):
 
         primary = self.parse_primary()
         primary.prefix_operators = prefix_operators
-        primary.selectors = list()
+        if getattr(primary, "selectors", None) is None:
+            primary.selectors = list()
         primary.postfix_operators = list()
 
         token = self.tokens.look()
