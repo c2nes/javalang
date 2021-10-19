@@ -59,11 +59,6 @@ class Node(object):
     @property
     def children(self):
         return [getattr(self, attr_name) for attr_name in self.attrs]
-    
-    @property
-    def position(self):
-        if hasattr(self, "_position"):
-            return self._position
 
 def walk_tree(root):
     children = None

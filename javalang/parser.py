@@ -279,12 +279,12 @@ class Parser(object):
         if self.try_accept('package'):
             self.tokens.pop_marker(False)
             
-            token = self.tokens.look()
             package_name = self.parse_qualified_identifier()
             package = tree.PackageDeclaration(annotations=package_annotations,
                                               name=package_name,
                                               documentation=javadoc)
-            package._position = token.position
+            package.start_position = next_token.position
+            package.end_position = self.tokens.last().position
             
             self.accept(';')
         else:
@@ -294,7 +294,8 @@ class Parser(object):
         while self.would_accept('import'):
             token = self.tokens.look()
             import_declaration = self.parse_import_declaration()
-            import_declaration._position = token.position
+            import_declaration.start_position = token.position
+            import_declaration.end_position = self.tokens.last().position
             import_declarations.append(import_declaration)
 
         while not isinstance(self.tokens.look(), EndOfInput):
@@ -306,9 +307,12 @@ class Parser(object):
             if type_declaration:
                 type_declarations.append(type_declaration)
 
-        return tree.CompilationUnit(package=package,
-                                    imports=import_declarations,
-                                    types=type_declarations)
+        compilation_unit = tree.CompilationUnit(package=package,
+                                                imports=import_declarations,
+                                                types=type_declarations)
+        compilation_unit.start_position = next_token.position
+        compilation_unit.end_position = next_token.position if self.tokens.last() is None else self.tokens.last().position
+        return compilation_unit
 
     @parse_debug
     def parse_import_declaration(self):
@@ -363,7 +367,8 @@ class Parser(object):
         else:
             self.illegal("Expected type declaration")
 
-        type_declaration._position = token.position
+        type_declaration.start_position = token.position
+        type_declaration.end_position = self.tokens.last().position
         type_declaration.modifiers = modifiers
         type_declaration.annotations = annotations
         type_declaration.documentation = javadoc
@@ -642,7 +647,8 @@ class Parser(object):
 
             elif self.is_annotation():
                 annotation = self.parse_annotation()
-                annotation._position = token.position
+                annotation.start_position = token.position
+                annotation.end_position = self.tokens.last().position
                 annotations.append(annotation)
 
             else:
@@ -658,7 +664,8 @@ class Parser(object):
             token = self.tokens.look()
             
             annotation = self.parse_annotation()
-            annotation._position = token.position
+            annotation.start_position = token.position
+            annotation.end_position = self.tokens.last().position
             annotations.append(annotation)
 
             if not self.is_annotation():
@@ -696,7 +703,8 @@ class Parser(object):
         while True:
             token = self.tokens.look()
             pair = self.parse_element_value_pair()
-            pair._position = token.position
+            pair.start_position = token.position
+            pair.end_position = self.tokens.last().position
             pairs.append(pair)
 
             if not self.try_accept(','):
@@ -718,7 +726,8 @@ class Parser(object):
         token = self.tokens.look()
         if self.is_annotation():
             annotation = self.parse_annotation()
-            annotation._position = token.position
+            annotation.start_position = token.position
+            annotation.end_position = self.tokens.last().position
             return annotation
 
         elif self.would_accept('{'):
@@ -824,7 +833,8 @@ class Parser(object):
         else:
             member = self.parse_method_or_field_declaraction()
 
-        member._position = token.position
+        member.start_position = token.position
+        member.end_position = self.tokens.last().position
         member.modifiers = modifiers
         member.annotations = annotations
         member.documentation = javadoc
@@ -950,7 +960,8 @@ class Parser(object):
             method.return_type = method_return_type
             method.name = method_name
 
-        method._position = token.position
+        method.start_position = token.position
+        method.end_position = self.tokens.last().position
         method.type_parameters = type_parameters
         return method
 
@@ -1007,7 +1018,8 @@ class Parser(object):
         else:
             declaration = self.parse_interface_method_or_field_declaration()
 
-        declaration._position = token.position
+        declaration.start_position = token.position
+        declaration.end_position = self.tokens.last().position
         
         return declaration
 
@@ -1154,7 +1166,8 @@ class Parser(object):
                                              name=parameter_name,
                                              varargs=varargs)
 
-            parameter._position = token.position
+            parameter.start_position = token.position
+            parameter.end_position = self.tokens.last().position
             formal_parameters.append(parameter)
 
             if varargs:
@@ -1179,7 +1192,8 @@ class Parser(object):
                 modifiers.add('final')
             elif self.is_annotation():
                 annotation = self.parse_annotation()
-                annotation._position = token.position
+                annotation.start_position = token.position
+                annotation.end_position = self.tokens.last().position
                 annotations.append(annotation)
             else:
                 break
@@ -1329,7 +1343,8 @@ class Parser(object):
 
         if found_annotations or isinstance(token, BasicType):
             statement = self.parse_local_variable_declaration_statement()
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         # At this point, if the block statement is a variable definition the next
@@ -1343,7 +1358,8 @@ class Parser(object):
         try:
             with self.tokens:
                 statement = self.parse_local_variable_declaration_statement()
-                statement._position = token.position
+                statement.start_position = token.position
+                statement.end_position = self.tokens.last().position
                 return statement
         except JavaSyntaxError:
             return self.parse_statement()
@@ -1367,12 +1383,14 @@ class Parser(object):
         if self.would_accept('{'):
             block = self.parse_block()
             statement = tree.BlockStatement(statements=block)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept(';'):
             statement = tree.Statement()
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.would_accept(Identifier, ':'):
@@ -1381,7 +1399,8 @@ class Parser(object):
 
             statement = self.parse_statement()
             statement.label = identifer
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
 
             return statement
 
@@ -1396,7 +1415,8 @@ class Parser(object):
             statement = tree.IfStatement(condition=condition,
                                     then_statement=then,
                                     else_statement=else_statement)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('assert'):
@@ -1409,7 +1429,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.AssertStatement(condition=condition, value=value)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('switch'):
@@ -1419,7 +1440,8 @@ class Parser(object):
             self.accept('}')
 
             statement = tree.SwitchStatement(expression=switch_expression, cases=switch_block)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('while'):
@@ -1427,7 +1449,8 @@ class Parser(object):
             action = self.parse_statement()
 
             statement = tree.WhileStatement(condition=condition, body=action)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('do'):
@@ -1437,7 +1460,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.DoStatement(condition=condition, body=action)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('for'):
@@ -1447,7 +1471,8 @@ class Parser(object):
             for_statement = self.parse_statement()
 
             statement = tree.ForStatement(control=for_control, body=for_statement)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('break'):
@@ -1459,7 +1484,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.BreakStatement(goto=label)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('continue'):
@@ -1471,7 +1497,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.ContinueStatement(goto=label)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('return'):
@@ -1483,7 +1510,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.ReturnStatement(expression=value)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('throw'):
@@ -1491,7 +1519,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.ThrowStatement(expression=value)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('synchronized'):
@@ -1499,7 +1528,8 @@ class Parser(object):
             block = self.parse_block()
 
             statement = tree.SynchronizedStatement(lock=lock, block=block)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         elif self.try_accept('try'):
@@ -1534,7 +1564,8 @@ class Parser(object):
                                      block=block,
                                      catches=catches,
                                      finally_block=finally_block)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
         else:
@@ -1542,7 +1573,8 @@ class Parser(object):
             self.accept(';')
 
             statement = tree.StatementExpression(expression=expression)
-            statement._position = token.position
+            statement.start_position = token.position
+            statement.end_position = self.tokens.last().position
             return statement
 
 # ------------------------------------------------------------------------------
@@ -1876,7 +1908,8 @@ class Parser(object):
         token = self.tokens.look()
         while token.value in '[.':
             selector = self.parse_selector()
-            selector._position = token.position
+            selector.start_position = token.position
+            selector.end_position = self.tokens.last().position
             primary.selectors.append(selector)
 
             token = self.tokens.look()
@@ -1948,7 +1981,8 @@ class Parser(object):
 
         if isinstance(token, Literal):
             literal = self.parse_literal()
-            literal._position = token.position
+            literal.start_position = token.position
+            literal.end_position = self.tokens.last().position
             return literal
 
         elif token.value == '(':
@@ -1981,7 +2015,8 @@ class Parser(object):
                                                           arguments=arguments)
             else:
                 invocation = self.parse_explicit_generic_invocation_suffix()
-                invocation._position = token.position
+                invocation.start_position = token.position
+                invocation.end_position = self.tokens.last().position
                 invocation.type_arguments = type_arguments
 
                 return invocation
@@ -2003,7 +2038,8 @@ class Parser(object):
             elif isinstance(identifier_suffix, tree.ClassReference):
                 identifier_suffix.type = tree.ReferenceType(name=qualified_identifier.pop())
 
-            identifier_suffix._position = token.position
+            identifier_suffix.start_position = token.position
+            identifier_suffix.end_position = self.tokens.last().position
             identifier_suffix.qualifier = '.'.join(qualified_identifier)
 
             return identifier_suffix
@@ -2221,7 +2257,8 @@ class Parser(object):
         token = self.tokens.look()
         
         invocation = self.parse_explicit_generic_invocation_suffix()
-        invocation._position = token.position
+        invocation.start_position = token.position
+        invocation.end_position = self.tokens.last().position
         invocation.type_arguments = type_arguments
 
         return invocation
@@ -2392,7 +2429,8 @@ class Parser(object):
                 declaration.declarators[0].name = attribute_name
                 declaration.type = attribute_type
 
-        declaration._position = token.position
+        declaration.start_position = token.position
+        declaration.end_position = self.tokens.last().position
         declaration.modifiers = modifiers
         declaration.annotations = annotations
         declaration.documentation = javadoc
