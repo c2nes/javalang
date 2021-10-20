@@ -188,5 +188,14 @@ int k;
         self.assertEqual(token[0].position.column, 1)
         self.assertEqual(token[3].position.column, 1)
 
+    def test_unicode(self):
+        code = """
+// Unicode characters greater than 0x7f are currently escaped to their numerical \\u equivalent.
+"""
+        # code = code.replace("\\\\u", "") # FIXME javalang does not handle \u in the java file
+        # code = code.replace("\\u", "")
+        list(tokenizer.tokenize(code))
+
+
 if __name__=="__main__":
     unittest.main()
