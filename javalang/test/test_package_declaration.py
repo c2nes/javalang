@@ -11,41 +11,41 @@ class PackageInfo(unittest.TestCase):
         source_file = "source/package-info/NoAnnotationNoJavadoc.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
-        self.failIf(ast.package.annotations)
-        self.failIf(ast.package.documentation)
+        self.assertTrue(ast.package.name == "org.javalang.test")
+        self.assertFalse(ast.package.annotations)
+        self.assertFalse(ast.package.documentation)
 
     def testAnnotationOnly(self):
         source_file = "source/package-info/AnnotationOnly.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
-        self.failUnless(ast.package.annotations)
-        self.failIf(ast.package.documentation)
+        self.assertTrue(ast.package.name == "org.javalang.test")
+        self.assertTrue(ast.package.annotations)
+        self.assertFalse(ast.package.documentation)
 
     def testJavadocOnly(self):
         source_file = "source/package-info/JavadocOnly.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
-        self.failIf(ast.package.annotations)
-        self.failUnless(ast.package.documentation)
+        self.assertTrue(ast.package.name == "org.javalang.test")
+        self.assertFalse(ast.package.annotations)
+        self.assertTrue(ast.package.documentation)
 
     def testAnnotationThenJavadoc(self):
         source_file = "source/package-info/AnnotationJavadoc.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
-        self.failUnless(ast.package.annotations)
-        self.failIf(ast.package.documentation)
+        self.assertTrue(ast.package.name == "org.javalang.test")
+        self.assertTrue(ast.package.annotations)
+        self.assertFalse(ast.package.documentation)
 
     def testJavadocThenAnnotation(self):
         source_file = "source/package-info/JavadocAnnotation.java"
         ast = self.get_ast(source_file)
 
-        self.failUnless(ast.package.name == "org.javalang.test")
-        self.failUnless(ast.package.annotations)
-        self.failUnless(ast.package.documentation)
+        self.assertTrue(ast.package.name == "org.javalang.test")
+        self.assertTrue(ast.package.annotations)
+        self.assertTrue(ast.package.documentation)
 
     def get_ast(self, filename):
         source = resource_string(__name__, filename)
