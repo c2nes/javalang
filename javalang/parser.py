@@ -229,7 +229,10 @@ class Parser(object):
 
     @parse_debug
     def parse_identifier(self):
-        return self.accept(Identifier)
+        token = self.tokens.look()
+        identifier = tree.Identifier(value=self.accept(Identifier))
+        identifier._position = token.position
+        return identifier
 
     @parse_debug
     def parse_qualified_identifier(self):
@@ -242,7 +245,7 @@ class Parser(object):
             if not self.try_accept('.'):
                 break
 
-        return '.'.join(qualified_identifier)
+        return tree.QualifiedIdentifier(values=qualified_identifier)
 
     @parse_debug
     def parse_qualified_identifier_list(self):
@@ -335,7 +338,7 @@ class Parser(object):
                 self.accept(';')
                 break
 
-        return tree.Import(path='.'.join(qualified_identifier),
+        return tree.Import(path=tree.QualifiedIdentifier(values=qualified_identifier),
                            static=static,
                            wildcard=import_all)
 
@@ -473,11 +476,16 @@ class Parser(object):
 
     @parse_debug
     def parse_basic_type(self):
-        return tree.BasicType(name=self.accept(BasicType))
+        token = self.tokens.look()
+        basic_type = tree.BasicType(name=self.accept(BasicType))
+        basic_type._position = token.position
+        return basic_type
 
     @parse_debug
     def parse_reference_type(self):
+        token = self.tokens.look()
         reference_type = tree.ReferenceType()
+        reference_type._position = token.position
         tail = reference_type
 
         while True:
@@ -516,11 +524,15 @@ class Parser(object):
         pattern_type = None
         base_type = None
 
+        token = self.tokens.look()
+
         if self.try_accept('?'):
-            if self.tokens.look().value in ('extends', 'super'):
-                pattern_type = self.tokens.next().value
+            if token.value in ('extends', 'super'):
+                pattern_type = tokens.next().value
             else:
-                return tree.TypeArgument(pattern_type='?')
+                type_argument = tree.TypeArgument(pattern_type='?')
+                type_argument._position = token.position
+                return type_argument
 
         if self.would_accept(BasicType):
             base_type = self.parse_basic_type()
@@ -532,8 +544,11 @@ class Parser(object):
 
         base_type.dimensions += self.parse_array_dimension()
 
-        return tree.TypeArgument(type=base_type,
+        token = self.tokens.look()
+        type_argument = tree.TypeArgument(type=base_type,
                                  pattern_type=pattern_type)
+        type_argument._position = token.position
+        return type_argument
 
     @parse_debug
     def parse_nonwildcard_type_arguments(self):
@@ -890,7 +905,8 @@ class Parser(object):
         return tree.MethodDeclaration(parameters=formal_parameters,
                                      throws=throws,
                                      body=body,
-                                     return_type=tree.Type(dimensions=additional_dimensions))
+                                     return_type=tree.Type(dimensions=additional_dimensions),
+                                     end_separator=self.tokens.last())
 
     @parse_debug
     def parse_void_method_declarator_rest(self):
@@ -908,7 +924,8 @@ class Parser(object):
 
         return tree.MethodDeclaration(parameters=formal_parameters,
                                       throws=throws,
-                                      body=body)
+                                      body=body,
+                                      end_separator=self.tokens.last())
 
     @parse_debug
     def parse_constructor_declarator_rest(self):
@@ -1137,7 +1154,7 @@ class Parser(object):
 
         while True:
             modifiers, annotations = self.parse_variable_modifiers()
-            
+
             token = self.tokens.look()
             parameter_type = self.parse_type()
             varargs = False
@@ -1893,7 +1910,8 @@ class Parser(object):
         if self.would_accept('<'):
             type_arguments = self.parse_nonwildcard_type_arguments()
         if self.would_accept('new'):
-            method_reference = tree.MemberReference(member=self.accept('new'))
+            self.accept('new')
+            method_reference = tree.MemberReference(member=self.tokens.last())
         else:
             method_reference = self.parse_expression()
         return method_reference, type_arguments
@@ -2004,7 +2022,7 @@ class Parser(object):
                 identifier_suffix.type = tree.ReferenceType(name=qualified_identifier.pop())
 
             identifier_suffix._position = token.position
-            identifier_suffix.qualifier = '.'.join(qualified_identifier)
+            identifier_suffix.qualifier = tree.QualifiedIdentifier(values=qualified_identifier)
 
             return identifier_suffix
 
@@ -2090,7 +2108,8 @@ class Parser(object):
             identifier = self.parse_identifier()
             arguments = self.parse_arguments()
             return tree.MethodInvocation(member=identifier,
-                                         arguments=arguments)
+                                         arguments=arguments,
+                                         end_separator=self.tokens.last())
 
 # ------------------------------------------------------------------------------
 # -- Creators --
@@ -2178,12 +2197,12 @@ class Parser(object):
     def parse_identifier_suffix(self):
         if self.try_accept('[', ']'):
             array_dimension = [None] + self.parse_array_dimension()
-            self.accept('.', 'class')
+            self.try_accept('.', 'class')
             return tree.ClassReference(type=tree.Type(dimensions=array_dimension))
 
         elif self.would_accept('('):
             arguments = self.parse_arguments()
-            return tree.MethodInvocation(arguments=arguments)
+            return tree.MethodInvocation(arguments=arguments, end_separator=self.tokens.last())
 
         elif self.try_accept('.', 'class'):
             return tree.ClassReference()
@@ -2254,14 +2273,15 @@ class Parser(object):
 
             token = self.tokens.look()
             if isinstance(token, Identifier):
-                identifier = self.tokens.next().value
+                identifier = self.tokens.next()
                 arguments = None
 
                 if self.would_accept('('):
                     arguments = self.parse_arguments()
 
                     return tree.MethodInvocation(member=identifier,
-                                                 arguments=arguments)
+                                                 arguments=arguments,
+                                                 end_separator=self.tokens.last())
                 else:
                     return tree.MemberReference(member=identifier)
             elif self.would_accept('super', '::'):

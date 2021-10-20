@@ -13,7 +13,7 @@ class Documented(Node):
     attrs = ("documentation",)
 
 class Declaration(Node):
-    attrs = ("modifiers", "annotations")
+    attrs = ("modifiers", "annotations", "end_separator")
 
 class TypeDeclaration(Declaration, Documented):
     attrs = ("name", "body")
@@ -32,6 +32,9 @@ class TypeDeclaration(Declaration, Documented):
 
 class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
+
+    def as_java(self):
+        return self.name.as_java()
 
 class ClassDeclaration(TypeDeclaration):
     attrs = ("type_parameters", "extends", "implements")
@@ -227,7 +230,7 @@ class MemberReference(Primary):
     attrs = ("member",)
 
 class Invocation(Primary):
-    attrs = ("type_arguments", "arguments")
+    attrs = ("type_arguments", "arguments", "end_separator")
 
 class ExplicitConstructorInvocation(Invocation):
     attrs = ()
@@ -278,3 +281,12 @@ class EnumConstantDeclaration(Declaration, Documented):
 class AnnotationMethod(Declaration):
     attrs = ("name", "return_type", "dimensions", "default")
 
+# ------------------------------------------------------------------------------
+class QualifiedIdentifier(Node):
+    attrs = ("values",)
+
+    def as_java(self):
+        return '.'.join(map(lambda q: q.value, self.values))
+
+class Identifier(Node):
+    attrs = ("value",)

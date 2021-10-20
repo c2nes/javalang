@@ -26,7 +26,7 @@ def filter_type_in_method(clazz, the_type, method_name):
     for path, node in clazz.filter(the_type):
         for p in reversed(path):
             if isinstance(p, tree.MethodDeclaration):
-                if p.name == method_name:
+                if p.name.value == method_name:
                     yield path, node
 
 
