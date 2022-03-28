@@ -1868,10 +1868,13 @@ class Parser(object):
                 pass
 
         primary = self.parse_primary()
+        if getattr(primary, "prefix_operators", None):
+            prefix_operators.extend(primary.prefix_operators)
         primary.prefix_operators = prefix_operators
         if getattr(primary, "selectors", None) is None:
             primary.selectors = list()
-        primary.postfix_operators = list()
+        if getattr(primary, "postfix_operators", None) is None:
+            primary.postfix_operators = list()
 
         token = self.tokens.look()
         while token.value in '[.':
