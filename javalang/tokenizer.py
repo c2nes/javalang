@@ -60,7 +60,7 @@ class Literal(JavaToken):
 class Integer(Literal):
     pass
 
-class DecimalInteger(Literal):
+class DecimalInteger(Integer):
     pass
 
 class OctalInteger(Integer):
