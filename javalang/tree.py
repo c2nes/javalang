@@ -89,7 +89,8 @@ class Member(Documented):
     attrs = ()
 
 class MethodDeclaration(Member, Declaration):
-    attrs = ("type_parameters", "return_type", "name", "parameters", "throws", "body")
+    attrs = ("type_parameters", "return_type", "name", "parameters", "throws", "body",
+             "end_position")
 
 class FieldDeclaration(Member, Declaration):
     attrs = ("type", "declarators")
