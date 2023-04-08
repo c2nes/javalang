@@ -1537,9 +1537,9 @@ class Parser(object):
             statement = tree.TryStatement(resources=resource_specification,
                                      block=block,
                                      catches=catches,
+                                     end_position=self.tokens.last().position,
                                      finally_block=finally_block)
             statement._position = token.position
-            statement._end_position = self.tokens.last().position
             return statement
 
         else:
@@ -1584,7 +1584,11 @@ class Parser(object):
         self.accept(')')
         block = self.parse_block()
 
-        return tree.CatchClause(parameter=catch_parameter, block=block)
+        return tree.CatchClause(
+                        parameter=catch_parameter,
+                        block=block,
+                        end_position=self.tokens.last().position,
+                    )
 
     @parse_debug
     def parse_resource_specification(self):

@@ -157,7 +157,7 @@ class SynchronizedStatement(Statement):
     attrs = ("lock", "block")
 
 class TryStatement(Statement):
-    attrs = ("resources", "block", "catches", "finally_block")
+    attrs = ("resources", "block", "catches", "finally_block", "end_position")
 
 class SwitchStatement(Statement):
     attrs = ("expression", "cases")
@@ -174,7 +174,7 @@ class TryResource(Declaration):
     attrs = ("type", "name", "value")
 
 class CatchClause(Statement):
-    attrs = ("parameter", "block")
+    attrs = ("parameter", "block", "end_position")
 
 class CatchClauseParameter(Declaration):
     attrs = ("types", "name")
