@@ -1539,6 +1539,7 @@ class Parser(object):
                                      catches=catches,
                                      finally_block=finally_block)
             statement._position = token.position
+            statement._end_position = self.tokens.last().position
             return statement
 
         else:
