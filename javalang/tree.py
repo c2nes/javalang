@@ -34,7 +34,8 @@ class PackageDeclaration(Declaration, Documented):
     attrs = ("name",)
 
 class ClassDeclaration(TypeDeclaration):
-    attrs = ("type_parameters", "extends", "implements")
+    attrs = ("type_parameters", "extends", "implements", "end_position")
+
 
 class EnumDeclaration(TypeDeclaration):
     attrs = ("implements",)

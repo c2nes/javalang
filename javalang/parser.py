@@ -397,6 +397,7 @@ class Parser(object):
                                      type_parameters=type_params,
                                      extends=extends,
                                      implements=implements,
+                                     end_position=self.tokens.last().position,
                                      body=body)
 
     @parse_debug
