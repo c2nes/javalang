@@ -926,6 +926,7 @@ class Parser(object):
 
         return tree.ConstructorDeclaration(parameters=formal_parameters,
                                            throws=throws,
+                                           end_position=self.tokens.last().position,
                                            body=body)
 
     @parse_debug

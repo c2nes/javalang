@@ -97,7 +97,8 @@ class FieldDeclaration(Member, Declaration):
     attrs = ("type", "declarators")
 
 class ConstructorDeclaration(Declaration, Documented):
-    attrs = ("type_parameters", "name", "parameters", "throws", "body")
+    attrs = ("type_parameters", "name", "parameters", "throws", "body",
+             "end_position")
 
 # ------------------------------------------------------------------------------
 
