@@ -486,7 +486,7 @@ class JavaTokenizer(object):
         self.data = ''.join(new_data)
         self.length = len(self.data)
 
-    def tokenize(self):
+    def tokenize(self, return_index=False):
         self.reset()
 
         # Convert unicode escapes
@@ -550,7 +550,11 @@ class JavaTokenizer(object):
 
             position = Position(self.current_line, self.i - self.start_of_line)
             token = token_type(self.data[self.i:self.j], position, self.javadoc)
-            yield token
+            
+            if return_index:
+                yield token, (self.i, self.j)
+            else:
+                yield token
 
             if self.javadoc:
                 self.javadoc = None
