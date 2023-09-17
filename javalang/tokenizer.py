@@ -492,8 +492,7 @@ class JavaTokenizer(object):
 
         # Convert unicode escapes
         # sm: This doesn't seem to help my particular use cases.
-        # self.pre_tokenize()
-        self.length = len(self.data)
+        self.pre_tokenize()
 
         while self.i < self.length:
             token_type = None
