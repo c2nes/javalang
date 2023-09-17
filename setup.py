@@ -5,9 +5,9 @@ setup(
     name = "javalang",
     packages = ["javalang"],
     version = "0.14.1",
-    author = "Chris Thunes",
-    author_email = "cthunes@brewtab.com",
-    url = "http://github.com/c2nes/javalang",
+    author = "Nevil Macwan",
+    author_email = "macnev2013@gmail.com",
+    url = "http://github.com/macnev2013/javalang",
     description = "Pure Python Java parser and tools",
     classifiers = [
         "Programming Language :: Python",
