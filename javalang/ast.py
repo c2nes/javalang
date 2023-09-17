@@ -55,6 +55,26 @@ class Node(object):
             if ((isinstance(pattern, type) and isinstance(node, pattern)) or
                 (node == pattern)):
                 yield path, node
+    
+    def pprint(self, indent=0):
+        indent_str = '| '*indent
+        print(indent_str + str(type(self)))
+        indent_str += '| '
+        for attr in sorted(self.attrs):
+            value = getattr(self, attr)
+            if isinstance(value, list):
+                print('%s*%s[]:' % (indent_str, attr))
+                for item in value:
+                    if isinstance(item, Node):
+                        item.pprint(indent+2)
+                    else:
+                        print('%s%s' % (indent_str+'| ', item))
+            elif isinstance(value, Node):
+                print('%s*%s:' % (indent_str, attr))
+                value.pprint(indent+1)
+            else:
+                print('%s*%s: %s' % (indent_str, attr, value))
+
 
     @property
     def children(self):
